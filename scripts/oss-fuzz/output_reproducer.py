@@ -47,27 +47,30 @@ def c_comment(s):
 def print_c_function(s):
     print("/* ")
     for l in s.splitlines():
-        print(" * {}".format(l))
+        print(f" * {l}")
 
 def bash_reproducer(path, args, trace):
-    result = '\\\n'.join(textwrap.wrap("cat << EOF | {} {}".format(path, args),
-                                       72, break_on_hyphens=False,
-                                       drop_whitespace=False))
+    result = '\\\n'.join(
+        textwrap.wrap(
+            f"cat << EOF | {path} {args}",
+            72,
+            break_on_hyphens=False,
+            drop_whitespace=False,
+        )
+    )
     for l in trace.splitlines():
         result += "\n" + '\\\n'.join(textwrap.wrap(l,72,drop_whitespace=False))
     result += "\nEOF"
     return result
 
 def c_reproducer(name, args, trace):
-    result = []
-    result.append("""static void {}(void)\n{{""".format(name))
-
+    result = [f"""static void {name}(void)\n{{"""]
     # libqtest will add its own qtest args, so get rid of them
     args = args.replace("-accel qtest","")
     args = args.replace(",accel=qtest","")
     args = args.replace("-machine accel=qtest","")
     args = args.replace("-qtest stdio","")
-    result.append("""QTestState *s = qtest_init("{}");""".format(args))
+    result.append(f"""QTestState *s = qtest_init("{args}");""")
     for l in trace.splitlines():
         param = l.split()
         cmd = param[0]
@@ -78,19 +81,16 @@ def c_reproducer(name, args, trace):
             bufstring = '\\x'+'\\x'.join(bufbytes)
             addr = param[1]
             size = param[2]
-            result.append("""qtest_bufwrite(s, {}, "{}", {});""".format(
-                          addr, bufstring, size))
+            result.append(f"""qtest_bufwrite(s, {addr}, "{bufstring}", {size});""")
         elif cmd.startswith("in") or cmd.startswith("read"):
-            result.append("qtest_{}(s, {});".format(
-                          cmd, param[1]))
+            result.append(f"qtest_{cmd}(s, {param[1]});")
         elif cmd.startswith("out") or cmd.startswith("write"):
-            result.append("qtest_{}(s, {}, {});".format(
-                          cmd, param[1], param[2]))
+            result.append(f"qtest_{cmd}(s, {param[1]}, {param[2]});")
         elif cmd == "clock_step":
             if len(param) ==1:
                 result.append("qtest_clock_step_next(s);")
             else:
-                result.append("qtest_clock_step(s, {});".format(param[1]))
+                result.append(f"qtest_clock_step(s, {param[1]});")
     result.append("qtest_quit(s);\n}")
     return "\n".join(result)
 

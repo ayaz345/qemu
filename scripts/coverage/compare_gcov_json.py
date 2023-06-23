@@ -42,7 +42,7 @@ def load_json(json_file_path: Path, verbose = False) -> dict[str, set[int]]:
         data = json.load(f)
 
     root_dir = json_file_path.absolute().parent
-    covered_lines = dict()
+    covered_lines = {}
 
     for filecov in data["files"]:
         file_path = Path(filecov["file"])
@@ -55,14 +55,11 @@ def load_json(json_file_path: Path, verbose = False) -> dict[str, set[int]]:
 
         lines = filecov["lines"]
 
-        executed_lines = set(
+        if executed_lines := {
             linecov["line_number"]
-            for linecov in filecov["lines"]
+            for linecov in lines
             if linecov["count"] != 0 and not linecov["gcovr/noncode"]
-        )
-
-        # if this file has any coverage add it to the system
-        if len(executed_lines) > 0:
+        }:
             if verbose:
                 print(f"file {file_path} {len(executed_lines)}/{len(lines)}")
             covered_lines[str(file_path)] = executed_lines

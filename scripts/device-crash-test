@@ -264,7 +264,7 @@ def qemuOptsEscape(s):
 
 def formatTestCase(t):
     """Format test case info as "key=value key=value" for prettier logging output"""
-    return ' '.join('%s=%s' % (k, v) for k, v in t.items())
+    return ' '.join(f'{k}={v}' for k, v in t.items())
 
 
 def qomListTypeNames(vm, **kwargs):
@@ -281,9 +281,10 @@ def infoQDM(vm):
         l = l.strip()
         if l == '' or l.endswith(':'):
             continue
-        d = {'name': re.search(r'name "([^"]+)"', l).group(1),
-             'no-user': (re.search(', no-user', l) is not None)}
-        yield d
+        yield {
+            'name': re.search(r'name "([^"]+)"', l)[1],
+            'no-user': re.search(', no-user', l) is not None,
+        }
 
 
 class QemuBinaryInfo(object):
@@ -303,8 +304,8 @@ class QemuBinaryInfo(object):
             self.alldevs = set(qomListTypeNames(vm, implements=devtype, abstract=False))
             # there's no way to query DeviceClass::user_creatable using QMP,
             # so use 'info qdm':
-            self.no_user_devs = set([d['name'] for d in infoQDM(vm, ) if d['no-user']])
-            self.machines = list(m['name'] for m in vm.command('query-machines'))
+            self.no_user_devs = {d['name'] for d in infoQDM(vm, ) if d['no-user']}
+            self.machines = [m['name'] for m in vm.command('query-machines')]
             self.user_devs = self.alldevs.difference(self.no_user_devs)
             self.kvm_available = vm.command('query-kvm')['enabled']
         finally:
@@ -320,7 +321,7 @@ class QemuBinaryInfo(object):
             return self._machine_info[machine]
 
         mi = {}
-        args = ['-S', '-machine', '%s' % (machine)]
+        args = ['-S', '-machine', f'{machine}']
         dbg("querying machine info for binary=%s machine=%s", self.binary, machine)
         vm = QEMUMachine(binary=self.binary, args=args)
         try:
@@ -358,8 +359,13 @@ def checkOneCase(args, testcase):
 
     dbg("will test: %r", testcase)
 
-    args = ['-S', '-machine', '%s,accel=%s' % (machine, accel),
-            '-device', qemuOptsEscape(device)]
+    args = [
+        '-S',
+        '-machine',
+        f'{machine},accel={accel}',
+        '-device',
+        qemuOptsEscape(device),
+    ]
     cmdline = ' '.join([binary] + args)
     dbg("will launch QEMU: %s", cmdline)
     vm = QEMUMachine(binary=binary, args=args, qmp_timer=15)
@@ -387,13 +393,17 @@ def checkOneCase(args, testcase):
 
 
 def binariesToTest(args, testcase):
-    if args.qemu:
-        r = args.qemu
-    else:
-        r = [f.path for f in os.scandir('.')
-             if f.name.startswith('qemu-system-') and
-                f.is_file() and os.access(f, os.X_OK)]
-    return r
+    return (
+        args.qemu
+        if args.qemu
+        else [
+            f.path
+            for f in os.scandir('.')
+            if f.name.startswith('qemu-system-')
+            and f.is_file()
+            and os.access(f, os.X_OK)
+        ]
+    )
 
 
 def accelsToTest(args, testcase):

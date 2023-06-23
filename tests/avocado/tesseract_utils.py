@@ -23,20 +23,13 @@ def tesseract_available(expected_version):
         version = res.stderr_text.split()[1]
     return int(version.split('.')[0]) == expected_version
 
-    match = re.match(r'tesseract\s(\d)', res)
-    if match is None:
-        return False
-    # now this is guaranteed to be a digit
-    return int(match.groups()[0]) == expected_version
-
 
 def tesseract_ocr(image_path, tesseract_args='', tesseract_version=3):
     console_logger = logging.getLogger('tesseract')
     console_logger.debug(image_path)
     if tesseract_version == 4:
         tesseract_args += ' --oem 1'
-    proc = process.run("tesseract {} {} stdout".format(tesseract_args,
-                                                       image_path))
+    proc = process.run(f"tesseract {tesseract_args} {image_path} stdout")
     lines = []
     for line in proc.stdout_text.split('\n'):
         sline = line.strip()

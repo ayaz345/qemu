@@ -100,7 +100,7 @@ def format_json(msg: str) -> str:
     """
     try:
         msg = json.loads(msg)
-        return str(json.dumps(msg))
+        return json.dumps(msg)
     except json.decoder.JSONDecodeError:
         msg = msg.replace('\n', '')
         words = msg.split(' ')
@@ -121,10 +121,7 @@ def has_handler_type(logger: logging.Logger,
 
     :return: returns True if handler of type `handler_type`.
     """
-    for handler in logger.handlers:
-        if isinstance(handler, handler_type):
-            return True
-    return False
+    return any(isinstance(handler, handler_type) for handler in logger.handlers)
 
 
 class App(QMPClient):
@@ -174,7 +171,7 @@ class App(QMPClient):
 
         if not has_handler_type(logging.getLogger(), TUILogHandler):
             logging.debug('Request: %s', str_msg)
-        self.add_to_history('<-- ' + str_msg)
+        self.add_to_history(f'<-- {str_msg}')
         return msg
 
     def _cb_inbound(self, msg: Message) -> Message:
@@ -190,7 +187,7 @@ class App(QMPClient):
 
         if not has_handler_type(logging.getLogger(), TUILogHandler):
             logging.debug('Request: %s', str_msg)
-        self.add_to_history('--> ' + str_msg)
+        self.add_to_history(f'--> {str_msg}')
         return msg
 
     async def _send_to_server(self, msg: Message) -> None:
@@ -290,12 +287,10 @@ class App(QMPClient):
 
         :return: formatted address
         """
-        if isinstance(self.address, tuple):
-            host, port = self.address
-            addr = f'{host}:{port}'
-        else:
-            addr = f'{self.address}'
-        return addr
+        if not isinstance(self.address, tuple):
+            return f'{self.address}'
+        host, port = self.address
+        return f'{host}:{port}'
 
     async def _initiate_connection(self) -> Optional[ConnectError]:
         """
@@ -564,8 +559,7 @@ class HistoryWindow(urwid.Frame):
             formatted.append((level, msg))
         else:
             lexer = lexers.JsonLexer()  # pylint: disable=no-member
-            for token in lexer.get_tokens(msg):
-                formatted.append(token)
+            formatted.extend(iter(lexer.get_tokens(msg)))
         self.history.add_to_history(formatted)
 
 

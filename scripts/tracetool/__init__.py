@@ -187,7 +187,7 @@ class Arguments:
 
     def casted(self):
         """List of argument names casted to their type."""
-        return ["(%s)%s" % (type_, name) for type_, name in self._args]
+        return [f"({type_}){name}" for type_, name in self._args]
 
 
 class Event(object):
@@ -257,15 +257,10 @@ class Event(object):
             raise ValueError("Event '%s' has more than maximum permitted "
                              "argument count" % name)
 
-        if orig is None:
-            self.original = weakref.ref(self)
-        else:
-            self.original = orig
-
+        self.original = weakref.ref(self) if orig is None else orig
         unknown_props = set(self.properties) - self._VALID_PROPS
         if len(unknown_props) > 0:
-            raise ValueError("Unknown properties: %s"
-                             % ", ".join(unknown_props))
+            raise ValueError(f'Unknown properties: {", ".join(unknown_props)}')
         assert isinstance(self.fmt, str) or len(self.fmt) == 2
 
     def copy(self):
@@ -319,11 +314,8 @@ class Event(object):
         if isinstance(self.fmt, str):
             fmt = self.fmt
         else:
-            fmt = "%s, %s" % (self.fmt[0], self.fmt[1])
-        return "Event('%s %s(%s) %s')" % (" ".join(self.properties),
-                                          self.name,
-                                          self.args,
-                                          fmt)
+            fmt = f"{self.fmt[0]}, {self.fmt[1]}"
+        return f"""Event('{" ".join(self.properties)} {self.name}({self.args}) {fmt}')"""
     # Star matching on PRI is dangerous as one might have multiple
     # arguments with that format, hence the non-greedy version of it.
     _FMT = re.compile("(%[\d\.]*\w+|%.*?PRI\S+)")
@@ -362,7 +354,7 @@ def read_events(fobj, fname):
     events = []
     for lineno, line in enumerate(fobj, 1):
         if line[-1] != '\n':
-            raise ValueError("%s does not end with a new line" % fname)
+            raise ValueError(f"{fname} does not end with a new line")
         if not line.strip():
             continue
         if line.lstrip().startswith('#'):
@@ -434,16 +426,16 @@ def generate(events, group, format, backends,
     import tracetool
 
     format = str(format)
-    if len(format) == 0:
+    if not format:
         raise TracetoolError("format not set")
     if not tracetool.format.exists(format):
-        raise TracetoolError("unknown format: %s" % format)
+        raise TracetoolError(f"unknown format: {format}")
 
     if len(backends) == 0:
         raise TracetoolError("no backends specified")
     for backend in backends:
         if not tracetool.backend.exists(backend):
-            raise TracetoolError("unknown backend: %s" % backend)
+            raise TracetoolError(f"unknown backend: {backend}")
     backend = tracetool.backend.Wrapper(backends, format)
 
     import tracetool.backend.dtrace

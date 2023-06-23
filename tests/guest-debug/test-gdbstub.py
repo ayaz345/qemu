@@ -12,9 +12,9 @@ failcount = 0
 def report(cond, msg):
     "Report success/fail of test"
     if cond:
-        print ("PASS: %s" % (msg))
+        print(f"PASS: {msg}")
     else:
-        print ("FAIL: %s" % (msg))
+        print(f"FAIL: {msg}")
         global failcount
         failcount += 1
 
@@ -25,7 +25,7 @@ def check_step():
     gdb.execute("si")
     end_pc = gdb.parse_and_eval('$pc')
 
-    return not (start_pc == end_pc)
+    return start_pc != end_pc
 
 
 def check_break(sym_name):
@@ -48,18 +48,17 @@ def check_break(sym_name):
 def check_hbreak(sym_name):
     "Setup hardware breakpoint, continue and check we stopped."
     sym, ok = gdb.lookup_symbol(sym_name)
-    gdb.execute("hbreak %s" % (sym_name))
+    gdb.execute(f"hbreak {sym_name}")
     gdb.execute("c")
 
     # hopefully we came back
     end_pc = gdb.parse_and_eval('$pc')
-    print ("%s == %s" % (end_pc, sym.value()))
+    print(f"{end_pc} == {sym.value()}")
 
-    if end_pc == sym.value():
-        gdb.execute("d 1")
-        return True
-    else:
+    if end_pc != sym.value():
         return False
+    gdb.execute("d 1")
+    return True
 
 
 class WatchPoint(gdb.Breakpoint):
@@ -79,7 +78,7 @@ class WatchPoint(gdb.Breakpoint):
 
     def stop(self):
         end_pc = gdb.parse_and_eval('$pc')
-        print ("HIT WP @ %s" % (end_pc))
+        print(f"HIT WP @ {end_pc}")
         return True
 
 
@@ -87,7 +86,7 @@ def do_one_watch(sym, wtype, text):
 
     wp = WatchPoint(sym, wtype)
     gdb.execute("c")
-    report_str = "%s for %s (%s)" % (text, sym, wp.sym.value())
+    report_str = f"{text} for {sym} ({wp.sym.value()})"
 
     if wp.hit_count > 0:
         report(True, report_str)
@@ -116,7 +115,7 @@ class CatchBreakpoint(gdb.Breakpoint):
 
     def stop(self):
         end_pc = gdb.parse_and_eval('$pc')
-        print ("CB: %s == %s" % (end_pc, self.sym.value()))
+        print(f"CB: {end_pc} == {self.sym.value()}")
         if end_pc == self.sym.value():
             report(False, "Hit final catchpoint")
 
@@ -125,11 +124,7 @@ def run_test():
     "Run through the tests one by one"
 
     print ("Checking we can step the first few instructions")
-    step_ok = 0
-    for i in range(3):
-        if check_step():
-            step_ok += 1
-
+    step_ok = sum(1 for _ in range(3) if check_step())
     report(step_ok == 3, "single step in boot code")
 
     print ("Checking HW breakpoint works")
@@ -166,7 +161,7 @@ try:
     run_test()
 
 except:
-    print ("GDB Exception: %s" % (sys.exc_info()[0]))
+    print(f"GDB Exception: {sys.exc_info()[0]}")
     failcount += 1
     import code
     code.InteractiveConsole(locals=globals()).interact()

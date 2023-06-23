@@ -102,8 +102,7 @@ first_func_line = 25
 number_of_functions = len(callgrind_data) - first_func_line - 2
 
 # Limit the number of top functions to "top"
-number_of_top_functions = (top if number_of_functions >
-                           top else number_of_functions)
+number_of_top_functions = min(number_of_functions, top)
 
 # Store the data of the top functions in top_functions[]
 top_functions = callgrind_data[first_func_line:

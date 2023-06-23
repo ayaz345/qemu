@@ -29,7 +29,6 @@ class CanonA1100Machine(QemuSystemTest):
         file_path = self.fetch_asset(tar_url, asset_hash=tar_hash)
         archive.extract(file_path, self.workdir)
         self.vm.set_console()
-        self.vm.add_args('-bios',
-                         self.workdir + '/day18/barebox.canon-a1100.bin')
+        self.vm.add_args('-bios', f'{self.workdir}/day18/barebox.canon-a1100.bin')
         self.vm.launch()
         wait_for_console_pattern(self, 'running /env/bin/init')

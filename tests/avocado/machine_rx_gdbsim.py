@@ -63,7 +63,7 @@ class RxGdbSimMachine(QemuSystemTest):
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
         self.vm.set_console()
-        kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'earlycon'
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}earlycon'
         self.vm.add_args('-kernel', kernel_path,
                          '-dtb', dtb_path,
                          '-no-reboot')

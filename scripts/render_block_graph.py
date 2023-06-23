@@ -30,8 +30,9 @@ from qemu.qmp.legacy import QEMUMonitorProtocol
 
 
 def perm(arr):
-    s = 'w' if 'write' in arr else '_'
-    s += 'r' if 'consistent-read' in arr else '_'
+    s = ('w' if 'write' in arr else '_') + (
+        'r' if 'consistent-read' in arr else '_'
+    )
     s += 'u' if 'write-unchanged' in arr else '_'
     s += 's' if 'resize' in arr else '_'
     return s

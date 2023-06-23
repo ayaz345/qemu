@@ -97,23 +97,19 @@ class TopologicalSorter:
     def static_order(self):
         # We do the sort right here, unlike the stdlib version
         from functools import reduce
-        data = {}
         r = []
 
         if not self.graph:
             return []
 
-        # This code wants the values in the dict to be specifically sets
-        for k, v in self.graph.items():
-            data[k] = set(v)
-
+        data = {k: set(v) for k, v in self.graph.items()}
         # Find all items that don't depend on anything.
         extra_items_in_deps = (reduce(set.union, data.values())
                                - set(data.keys()))
         # Add empty dependencies where needed
-        data.update({item:{} for item in extra_items_in_deps})
+        data |= {item:{} for item in extra_items_in_deps}
         while True:
-            ordered = set(item for item, dep in data.items() if not dep)
+            ordered = {item for item, dep in data.items() if not dep}
             if not ordered:
                 break
             r.extend(ordered)
@@ -124,7 +120,7 @@ class TopologicalSorter:
             # This doesn't give as nice results as the stdlib, which
             # gives you the cycle by listing the nodes in order. Here
             # we only know the nodes in the cycle but not their order.
-            raise CycleError(f'nodes are in a cycle', list(data.keys()))
+            raise CycleError('nodes are in a cycle', list(data.keys()))
 
         return r
 # end TopologicalSorter
@@ -173,9 +169,7 @@ def str_indent(c):
 
 def str_fields(fields):
     """Return a string uniquely identifying FIELDS"""
-    r = ''
-    for n in sorted(fields.keys()):
-        r += '_' + n
+    r = ''.join(f'_{n}' for n in sorted(fields.keys()))
     return r[1:]
 
 
@@ -205,10 +199,7 @@ def str_match_bits(bits, mask):
     r = ''
     while i != 0:
         if i & mask:
-            if i & bits:
-                r += '1'
-            else:
-                r += '0'
+            r += '1' if i & bits else '0'
         else:
             r += '.'
         if i & space:
@@ -235,10 +226,7 @@ def is_contiguous(bits):
     if bits == 0:
         return -1
     shift = ctz(bits)
-    if is_pow2((bits >> shift) + 1):
-        return shift
-    else:
-        return -1
+    return shift if is_pow2((bits >> shift) + 1) else -1
 
 
 def eq_fields_for_args(flds_a, arg):
@@ -248,10 +236,7 @@ def eq_fields_for_args(flds_a, arg):
     for t in arg.types:
         if t != 'int':
             return False
-    for k, a in flds_a.items():
-        if k not in arg.fields:
-            return False
-    return True
+    return all(k in arg.fields for k, a in flds_a.items())
 
 
 def eq_fields_for_fmts(flds_a, flds_b):
@@ -275,11 +260,8 @@ class Field:
         self.mask = ((1 << len) - 1) << pos
 
     def __str__(self):
-        if self.sign:
-            s = 's'
-        else:
-            s = ''
-        return str(self.pos) + ':' + s + str(self.len)
+        s = 's' if self.sign else ''
+        return f'{str(self.pos)}:{s}{str(self.len)}'
 
     def str_extract(self, lvalue_formatter):
         global bitop_width
@@ -329,10 +311,10 @@ class MultiField:
     def __ne__(self, other):
         if len(self.subs) != len(other.subs):
             return True
-        for a, b in zip(self.subs, other.subs):
-            if a.__class__ != b.__class__ or a != b:
-                return True
-        return False
+        return any(
+            a.__class__ != b.__class__ or a != b
+            for a, b in zip(self.subs, other.subs)
+        )
 
     def __eq__(self, other):
         return not self.__ne__(other)
@@ -369,11 +351,10 @@ class FunctionField:
         self.func = func
 
     def __str__(self):
-        return self.func + '(' + str(self.base) + ')'
+        return f'{self.func}({str(self.base)})'
 
     def str_extract(self, lvalue_formatter):
-        return (self.func + '(ctx, '
-                + self.base.str_extract(lvalue_formatter) + ')')
+        return f'{self.func}(ctx, {self.base.str_extract(lvalue_formatter)})'
 
     def referenced_fields(self):
         return self.base.referenced_fields()
@@ -397,7 +378,7 @@ class ParameterField:
         return self.func
 
     def str_extract(self, lvalue_formatter):
-        return self.func + '(ctx)'
+        return f'{self.func}(ctx)'
 
     def referenced_fields(self):
         return []
@@ -445,10 +426,10 @@ class Arguments:
         self.types = types
 
     def __str__(self):
-        return self.name + ' ' + str(self.fields)
+        return f'{self.name} {str(self.fields)}'
 
     def struct_name(self):
-        return 'arg_' + self.name
+        return f'arg_{self.name}'
 
     def output_def(self):
         if not self.extern:
@@ -474,7 +455,7 @@ class General:
         self.dangling = None
 
     def __str__(self):
-        return self.name + ' ' + str_match_bits(self.fixedbits, self.fixedmask)
+        return f'{self.name} {str_match_bits(self.fixedbits, self.fixedmask)}'
 
     def str1(self, i):
         return str_indent(i) + self.__str__()
@@ -491,9 +472,7 @@ class General:
             # Compute this once and cache the answer
             dangling = []
             for n, f in self.fields.items():
-                for r in f.referenced_fields():
-                    if r not in self.fields:
-                        dangling.append(r)
+                dangling.extend(r for r in f.referenced_fields() if r not in self.fields)
             self.dangling = dangling
         return self.dangling
 
@@ -523,7 +502,7 @@ class General:
             # a cycle (there might be others too, but only one is reported).
             # Pretty-print it to tell the user.
             cycle = ' => '.join(e.args[1])
-            error(self.lineno, 'field definitions form a cycle: ' + cycle)
+            error(self.lineno, f'field definitions form a cycle: {cycle}')
 # end General
 
 
@@ -532,12 +511,12 @@ class Format(General):
 
     def extract_name(self):
         global decode_function
-        return decode_function + '_extract_' + self.name
+        return f'{decode_function}_extract_{self.name}'
 
     def output_extract(self):
         output('static void ', self.extract_name(), '(DisasContext *ctx, ',
                self.base.struct_name(), ' *a, ', insntype, ' insn)\n{\n')
-        self.output_fields(str_indent(4), lambda n: 'a->' + n)
+        self.output_fields(str_indent(4), lambda n: f'a->{n}')
         output('}\n\n')
 # end Format
 
@@ -579,14 +558,14 @@ class Pattern(General):
                                 'in pattern'))
         if fmt_refs:
             # pattern fields first
-            self.output_fields(ind, lambda n: 'u.f_' + arg + '.' + n)
+            self.output_fields(ind, lambda n: f'u.f_{arg}.{n}')
             assert not extracted, "dangling fmt refs but it was already extracted"
         if not extracted:
             output(ind, self.base.extract_name(),
                    '(ctx, &u.f_', arg, ', insn);\n')
         if not fmt_refs:
             # pattern fields last
-            self.output_fields(ind, lambda n: 'u.f_' + arg + '.' + n)
+            self.output_fields(ind, lambda n: f'u.f_{arg}.{n}')
 
         output(ind, 'if (', translate_prefix, '_', self.name,
                '(ctx, &u.f_', arg, ')) return true;\n')
@@ -620,7 +599,7 @@ class MultiPattern(General):
     def __str__(self):
         r = 'group'
         if self.fixedbits is not None:
-            r += ' ' + str_match_bits(self.fixedbits, self.fixedmask)
+            r += f' {str_match_bits(self.fixedbits, self.fixedmask)}'
         return r
 
     def output_decl(self):
@@ -718,12 +697,12 @@ class Tree:
         ind = str_indent(i)
         r = ind + whex(self.fixedmask)
         if self.format:
-            r += ' ' + self.format.name
+            r += f' {self.format.name}'
         r += ' [\n'
         for (b, s) in self.subs:
-            r += ind + f'  {whex(b)}:\n'
+            r += f'{ind}  {whex(b)}:\n'
             r += s.str1(i + 4) + '\n'
-        r += ind + ']'
+        r += f'{ind}]'
         return r
 
     def __str__(self):
@@ -841,8 +820,8 @@ class ExcMultiPattern(MultiPattern):
         for (b, s) in tree.subs:
             if f is None:
                 f = s.base
-                if f is None:
-                    return
+            if f is None:
+                return
             if f is not s.base:
                 return
         tree.base = f
@@ -873,7 +852,7 @@ def parse_field(lineno, name, toks):
             func = func[1]
             continue
 
-        if re.fullmatch(re_C_ident + ':s[0-9]+', t):
+        if re.fullmatch(f'{re_C_ident}:s[0-9]+', t):
             # Signed named field
             subtoks = t.split(':')
             n = subtoks[0]
@@ -882,7 +861,7 @@ def parse_field(lineno, name, toks):
             subs.append(f)
             width += le
             continue
-        if re.fullmatch(re_C_ident + ':[0-9]+', t):
+        if re.fullmatch(f'{re_C_ident}:[0-9]+', t):
             # Unsigned named field
             subtoks = t.split(':')
             n = subtoks[0]
@@ -912,12 +891,7 @@ def parse_field(lineno, name, toks):
 
     if width > insnwidth:
         error(lineno, 'field too large')
-    if len(subs) == 0:
-        if func:
-            f = ParameterField(func)
-        else:
-            error(lineno, 'field with no value')
-    else:
+    if subs:
         if len(subs) == 1:
             f = subs[0]
         else:
@@ -930,6 +904,10 @@ def parse_field(lineno, name, toks):
         if func:
             f = FunctionField(func, f)
 
+    elif func:
+        f = ParameterField(func)
+    else:
+        error(lineno, 'field with no value')
     if name in fields:
         error(lineno, 'duplicate field', name)
     fields[name] = f
@@ -950,7 +928,7 @@ def parse_arguments(lineno, name, toks):
             extern = True
             anyextern = True
             continue
-        if re.fullmatch(re_C_ident + ':' + re_C_ident, n):
+        if re.fullmatch(f'{re_C_ident}:{re_C_ident}', n):
             (n, t) = n.split(':')
         elif re.fullmatch(re_C_ident, n):
             t = 'int'
@@ -1024,7 +1002,7 @@ def infer_format(arg, fieldmask, flds, width):
             continue
         return (fmt, const_flds)
 
-    name = decode_function + '_Fmt_' + str(len(formats))
+    name = f'{decode_function}_Fmt_{len(formats)}'
     if not arg:
         arg = infer_argument_set(flds)
 

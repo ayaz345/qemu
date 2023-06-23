@@ -82,8 +82,9 @@ class IntegratorMachine(QemuSystemTest):
         framebuffer_ready = 'Console: switching to colour frame buffer device'
         wait_for_console_pattern(self, framebuffer_ready)
         self.vm.command('human-monitor-command', command_line='stop')
-        self.vm.command('human-monitor-command',
-                        command_line='screendump %s' % screendump_path)
+        self.vm.command(
+            'human-monitor-command', command_line=f'screendump {screendump_path}'
+        )
         logger = logging.getLogger('framebuffer')
 
         cpu_count = 1

@@ -295,7 +295,7 @@ class Connect(TestBase):
     Tests primarily related to calling Connect().
     """
     async def _bad_connection(self, family: str):
-        assert family in ('INET', 'UNIX')
+        assert family in {'INET', 'UNIX'}
 
         if family == 'INET':
             await self.proto.connect(('127.0.0.1', 0))
@@ -423,7 +423,7 @@ class Accept(Connect):
     All of the same tests as Connect, but using the accept() interface.
     """
     async def _bad_connection(self, family: str):
-        assert family in ('INET', 'UNIX')
+        assert family in {'INET', 'UNIX'}
 
         if family == 'INET':
             await self.proto.start_server_and_accept(('example.com', 1))
@@ -432,7 +432,7 @@ class Accept(Connect):
 
     async def _hanging_connection(self):
         with TemporaryDirectory(suffix='.qmp') as tmpdir:
-            sock = os.path.join(tmpdir, type(self.proto).__name__ + ".sock")
+            sock = os.path.join(tmpdir, f"{type(self.proto).__name__}.sock")
             await self.proto.start_server_and_accept(sock)
 
 
@@ -571,7 +571,7 @@ class SimpleSession(TestBase):
 
     def setUp(self):
         super().setUp()
-        self.server = LineProtocol(type(self).__name__ + '-server')
+        self.server = LineProtocol(f'{type(self).__name__}-server')
 
     async def _asyncSetUp(self):
         await super()._asyncSetUp()
@@ -588,7 +588,7 @@ class SimpleSession(TestBase):
     @TestBase.async_test
     async def testSmoke(self):
         with TemporaryDirectory(suffix='.qmp') as tmpdir:
-            sock = os.path.join(tmpdir, type(self.proto).__name__ + ".sock")
+            sock = os.path.join(tmpdir, f"{type(self.proto).__name__}.sock")
             server_task = create_task(self.server.start_server_and_accept(sock))
 
             # give the server a chance to start listening [...]

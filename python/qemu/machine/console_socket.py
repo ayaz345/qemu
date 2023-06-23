@@ -49,8 +49,7 @@ class ConsoleSocket(socket.socket):
     def __repr__(self) -> str:
         tmp = super().__repr__()
         tmp = tmp.rstrip(">")
-        tmp = "%s,  logfile=%s, drain_thread=%s>" % (tmp, self._logfile,
-                                                     self._drain_thread)
+        tmp = f"{tmp},  logfile={self._logfile}, drain_thread={self._drain_thread}>"
         return tmp
 
     def _drain_fn(self) -> None:
@@ -110,7 +109,7 @@ class ConsoleSocket(socket.socket):
             elapsed_sec = time.time() - start_time
             if elapsed_sec > self._recv_timeout_sec:
                 raise socket.timeout
-        return bytes((self._buffer.popleft() for i in range(bufsize)))
+        return bytes(self._buffer.popleft() for _ in range(bufsize))
 
     def setblocking(self, value: bool) -> None:
         """When not draining we pass thru to the socket,

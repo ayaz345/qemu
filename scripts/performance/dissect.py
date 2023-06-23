@@ -49,12 +49,15 @@ def get_JIT_line(callgrind_data):
     Returns:
     (int): Line number
     """
-    line = -1
-    for i in range(len(callgrind_data)):
-        if callgrind_data[i].strip('\n') and \
-                callgrind_data[i].split()[-1] == "[???]":
-            line = i
-            break
+    line = next(
+        (
+            i
+            for i in range(len(callgrind_data))
+            if callgrind_data[i].strip('\n')
+            and callgrind_data[i].split()[-1] == "[???]"
+        ),
+        -1,
+    )
     if line == -1:
         sys.exit("Couldn't locate the JIT call ... Exiting.")
     return line
@@ -88,12 +91,18 @@ def main():
         annotate_out_path = os.path.join(tmpdirname, "callgrind_annotate.out")
 
         # Run callgrind
-        callgrind = subprocess.run((["valgrind",
-                                     "--tool=callgrind",
-                                     "--callgrind-out-file=" + data_path]
-                                    + command),
-                                   stdout=subprocess.DEVNULL,
-                                   stderr=subprocess.PIPE)
+        callgrind = subprocess.run(
+            (
+                [
+                    "valgrind",
+                    "--tool=callgrind",
+                    f"--callgrind-out-file={data_path}",
+                ]
+                + command
+            ),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
         if callgrind.returncode:
             sys.exit(callgrind.stderr.decode("utf-8"))
 

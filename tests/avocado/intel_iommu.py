@@ -33,12 +33,11 @@ class IntelIOMMU(LinuxTest):
         self.vm.add_args('-device', 'virtio-blk-pci,bus=pcie.0,scsi=off,' +
                          'drive=drv0,id=virtio-disk0,bootindex=1,'
                          'werror=stop,rerror=stop' + self.IOMMU_ADDON)
-        self.vm.add_args('-device', 'virtio-gpu-pci' + self.IOMMU_ADDON)
-        self.vm.add_args('-drive',
-                         'file=%s,if=none,cache=writethrough,id=drv0' % path)
+        self.vm.add_args('-device', f'virtio-gpu-pci{self.IOMMU_ADDON}')
+        self.vm.add_args('-drive', f'file={path},if=none,cache=writethrough,id=drv0')
 
     def setUp(self):
-        super(IntelIOMMU, self).setUp(None, 'virtio-net-pci' + self.IOMMU_ADDON)
+        super(IntelIOMMU, self).setUp(None, f'virtio-net-pci{self.IOMMU_ADDON}')
 
     def add_common_args(self):
         self.vm.add_args('-device', 'virtio-rng-pci,rng=rng0')
@@ -53,8 +52,8 @@ class IntelIOMMU(LinuxTest):
         if custom_kernel is None:
             return
 
-        kernel_url = self.distro.pxeboot_url + 'vmlinuz'
-        initrd_url = self.distro.pxeboot_url + 'initrd.img'
+        kernel_url = f'{self.distro.pxeboot_url}vmlinuz'
+        initrd_url = f'{self.distro.pxeboot_url}initrd.img'
         self.kernel_path = self.fetch_asset(kernel_url)
         self.initrd_path = self.fetch_asset(initrd_url)
 

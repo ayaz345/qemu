@@ -303,10 +303,7 @@ def get_arch_ehdr(endianness, elfclass):
             self.e_phnum = 0
 
     # End get_arch_ehdr
-    if elfclass == ELFCLASS64:
-        return EHDR64()
-    else:
-        return EHDR32()
+    return EHDR64() if elfclass == ELFCLASS64 else EHDR32()
 
 
 def get_arch_phdr(endianness, elfclass):
@@ -342,10 +339,7 @@ def get_arch_phdr(endianness, elfclass):
                     ('p_align', ctypes.c_uint32)]
 
     # End get_arch_phdr
-    if elfclass == ELFCLASS64:
-        return PHDR64()
-    else:
-        return PHDR32()
+    return PHDR64() if elfclass == ELFCLASS64 else PHDR32()
 
 
 def int128_get64(val):
@@ -430,7 +424,7 @@ def get_guest_phys_blocks():
         predecessor = None
 
         # find continuity in guest physical address space
-        if len(guest_phys_blocks) > 0:
+        if guest_phys_blocks:
             predecessor = guest_phys_blocks[-1]
             predecessor_size = (predecessor["target_end"] -
                                 predecessor["target_start"])
@@ -557,13 +551,14 @@ shape and this command should mostly work."""
         if gdb.lookup_symbol("vmcoreinfo_realize")[0] is None:
             return
         vmci = 'vmcoreinfo_realize::vmcoreinfo_state'
-        if not gdb.parse_and_eval("%s" % vmci) \
-           or not gdb.parse_and_eval("(%s)->has_vmcoreinfo" % vmci):
+        if not gdb.parse_and_eval(f"{vmci}") or not gdb.parse_and_eval(
+            f"({vmci})->has_vmcoreinfo"
+        ):
             return
 
-        fmt = gdb.parse_and_eval("(%s)->vmcoreinfo.guest_format" % vmci)
-        addr = gdb.parse_and_eval("(%s)->vmcoreinfo.paddr" % vmci)
-        size = gdb.parse_and_eval("(%s)->vmcoreinfo.size" % vmci)
+        fmt = gdb.parse_and_eval(f"({vmci})->vmcoreinfo.guest_format")
+        addr = gdb.parse_and_eval(f"({vmci})->vmcoreinfo.paddr")
+        size = gdb.parse_and_eval(f"({vmci})->vmcoreinfo.size")
 
         fmt = le16_to_cpu(fmt)
         addr = le64_to_cpu(addr)
@@ -572,8 +567,7 @@ shape and this command should mostly work."""
         if fmt != VMCOREINFO_FORMAT_ELF:
             return
 
-        vmcoreinfo = self.phys_memory_read(addr, size)
-        if vmcoreinfo:
+        if vmcoreinfo := self.phys_memory_read(addr, size):
             self.elf.add_vmcoreinfo_note(bytes(vmcoreinfo))
 
     def invoke(self, args, from_tty):

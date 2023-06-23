@@ -68,10 +68,7 @@ def which(tool):
 def missing_deps():
     """ returns True if any of the test dependent tools are absent.
     """
-    for dep in deps:
-        if which(dep) is None:
-            return True
-    return False
+    return any(which(dep) is None for dep in deps)
 
 def supported_platform():
     """ checks if the test is running on a supported platform.
@@ -110,13 +107,15 @@ class QEMUBitsMachine(QEMUMachine): # pylint: disable=too-few-public-methods
     @property
     def _base_args(self) -> List[str]:
         args = super()._base_args
-        args.extend([
-            '-chardev',
-            'file,path=%s,id=debugcon' %os.path.join(self.base_temp_dir,
-                                                     self.debugcon_log),
-            '-device',
-            'isa-debugcon,iobase=%s,chardev=debugcon' %self.debugcon_addr,
-        ])
+        args.extend(
+            [
+                '-chardev',
+                'file,path=%s,id=debugcon'
+                % os.path.join(self.base_temp_dir, self.debugcon_log),
+                '-device',
+                f'isa-debugcon,iobase={self.debugcon_addr},chardev=debugcon',
+            ]
+        )
         return args
 
     def base_args(self):
@@ -139,22 +138,18 @@ class AcpiBitsTest(QemuBaseTest): #pylint: disable=too-many-instance-attributes
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._vm = None
         self._workDir = None
         self._baseDir = None
 
         # following are some standard configuration constants
         self._bitsInternalVer = 2020
         self._bitsCommitHash = 'b48b88ff' # commit hash must match
-                                          # the artifact tag below
         self._bitsTag = "qemu-bits-10182022" # this is the latest bits
-                                             # release as of today.
         self._bitsArtSHA1Hash = 'b04790ac9b99b5662d0416392c73b97580641fe5'
-        self._bitsArtURL = ("https://gitlab.com/qemu-project/"
-                            "biosbits-bits/-/jobs/artifacts/%s/"
-                            "download?job=qemu-bits-build" %self._bitsTag)
+        self._bitsArtURL = f"https://gitlab.com/qemu-project/biosbits-bits/-/jobs/artifacts/{self._bitsTag}/download?job=qemu-bits-build"
         self._debugcon_addr = '0x403'
         self._debugcon_log = 'debugcon-log.txt'
+        self._vm = None
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger('acpi-bits')
 
@@ -196,13 +191,13 @@ class AcpiBitsTest(QemuBaseTest): #pylint: disable=too-many-instance-attributes
 
         for filename in os.listdir(bits_test_dir):
             if os.path.isfile(os.path.join(bits_test_dir, filename)) and \
-               filename.endswith('.py2'):
+                   filename.endswith('.py2'):
                 # all test scripts are named with extension .py2 so that
                 # avocado does not try to load them. These scripts are
                 # written for python 2.7 not python 3 and hence if avocado
                 # loaded them, it would complain about python 3 specific
                 # syntaxes.
-                newfilename = os.path.splitext(filename)[0] + '.py'
+                newfilename = f'{os.path.splitext(filename)[0]}.py'
                 shutil.copy2(os.path.join(bits_test_dir, filename),
                              os.path.join(target_test_dir, newfilename))
                 self.logger.info('copied test file %s to %s',
@@ -210,7 +205,7 @@ class AcpiBitsTest(QemuBaseTest): #pylint: disable=too-many-instance-attributes
 
                 # now remove the pyc test file if it exists, otherwise the
                 # changes in the python test script won't be executed.
-                testfile_pyc = os.path.splitext(filename)[0] + '.pyc'
+                testfile_pyc = f'{os.path.splitext(filename)[0]}.pyc'
                 if os.access(os.path.join(target_test_dir, testfile_pyc),
                              os.F_OK):
                     os.remove(os.path.join(target_test_dir, testfile_pyc))
@@ -378,14 +373,14 @@ class AcpiBitsTest(QemuBaseTest): #pylint: disable=too-many-instance-attributes
                                    debugcon_log=self._debugcon_log,
                                    debugcon_addr=self._debugcon_addr)
 
-        self._vm.add_args('-cdrom', '%s' %iso_file)
+        self._vm.add_args('-cdrom', f'{iso_file}')
         # the vm needs to be run under icount so that TCG emulation is
         # consistent in terms of timing. smilatency tests have consistent
         # timing requirements.
         self._vm.add_args('-icount', 'auto')
 
         args = " ".join(str(arg) for arg in self._vm.base_args()) + \
-            " " + " ".join(str(arg) for arg in self._vm.args)
+                " " + " ".join(str(arg) for arg in self._vm.args)
 
         self.logger.info("launching QEMU vm with the following arguments: %s",
                          args)

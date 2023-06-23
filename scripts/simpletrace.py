@@ -28,9 +28,7 @@ def read_header(fobj, hfmt):
     '''Read a trace record header'''
     hlen = struct.calcsize(hfmt)
     hdr = fobj.read(hlen)
-    if len(hdr) != hlen:
-        return None
-    return struct.unpack(hfmt, hdr)
+    return None if len(hdr) != hlen else struct.unpack(hfmt, hdr)
 
 def get_record(edict, idtoname, rechdr, fobj):
     """Deserialize a trace record from a file into a tuple
@@ -117,9 +115,7 @@ def read_trace_records(edict, idtoname, fobj):
             event_id, name = get_mapping(fobj)
             idtoname[event_id] = name
         else:
-            rec = read_record(edict, idtoname, fobj)
-
-            yield rec
+            yield read_record(edict, idtoname, fobj)
 
 class Analyzer(object):
     """A trace file analyzer which processes trace records.
@@ -251,13 +247,11 @@ if __name__ == '__main__':
 
             fields = [event.name, '%0.3f' % (delta_ns / 1000.0),
                       'pid=%d' % rec[2]]
-            i = 3
-            for type, name in event.args:
+            for i, (type, name) in enumerate(event.args, start=3):
                 if is_string(type):
-                    fields.append('%s=%s' % (name, rec[i]))
+                    fields.append(f'{name}={rec[i]}')
                 else:
                     fields.append('%s=0x%x' % (name, rec[i]))
-                i += 1
             print(' '.join(fields))
 
     run(Formatter())

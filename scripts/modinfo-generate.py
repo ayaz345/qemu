@@ -28,7 +28,7 @@ def parse_line(line):
             get_data = True
             continue
         if get_data:
-            data += " " + item
+            data += f" {item}"
             continue
     return (kind, data)
 
@@ -52,8 +52,7 @@ def generate(name, lines, enabled):
                 # don't add a module which dependency is not enabled
                 # in kconfig
                 if data.strip() not in enabled:
-                    print("    /* module {} isn't enabled in Kconfig. */"
-                          .format(data.strip()))
+                    print(f"    /* module {data.strip()} isn't enabled in Kconfig. */")
                     print("/* },{ */")
                     return None
             else:
@@ -62,7 +61,7 @@ def generate(name, lines, enabled):
 
     print("    .name = \"%s\"," % name)
     if arch != "":
-        print("    .arch = %s," % arch)
+        print(f"    .arch = {arch},")
     print_array("objs", objs)
     print_array("deps", deps)
     print_array("opts", opts)
@@ -88,7 +87,7 @@ def main(args):
     # get all devices enabled in kconfig, from *-config-device.mak
     enabled = set()
     with open(args[1]) as file:
-        for line in file.readlines():
+        for line in file:
             config = line.split('=')
             if config[1].rstrip() == 'y':
                 enabled.add(config[0][7:]) # remove CONFIG_
@@ -99,7 +98,7 @@ def main(args):
     for modinfo in args[2:]:
         with open(modinfo) as f:
             lines = f.readlines()
-        print("    /* %s */" % modinfo)
+        print(f"    /* {modinfo} */")
         (basename, _) = os.path.splitext(modinfo)
         moddeps = generate(basename, lines, enabled)
         if moddeps is not None:
@@ -109,8 +108,7 @@ def main(args):
 
     error = False
     for dep in deps.difference(modules):
-        print("Dependency {} cannot be satisfied".format(dep),
-              file=sys.stderr)
+        print(f"Dependency {dep} cannot be satisfied", file=sys.stderr)
         error = True
 
     if error:

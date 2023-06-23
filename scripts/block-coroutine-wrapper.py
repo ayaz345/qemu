@@ -93,7 +93,7 @@ class FuncDecl:
         self.get_result = 's->ret = '
         self.ret = 'return s.ret;'
         self.co_ret = 'return '
-        self.return_field = self.return_type + " ret;"
+        self.return_field = f"{self.return_type} ret;"
         if self.return_type == 'void':
             self.get_result = ''
             self.ret = ''
@@ -201,7 +201,7 @@ def create_co_wrapper(func: FuncDecl) -> str:
 
 
 def gen_co_wrapper(func: FuncDecl) -> str:
-    assert not '_co_' in func.name
+    assert '_co_' not in func.name
     assert func.wrapper_type == 'co'
 
     name = func.target_name

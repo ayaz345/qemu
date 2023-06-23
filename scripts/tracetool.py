@@ -25,7 +25,7 @@ _SCRIPT = ""
 
 def error_opt(msg = None):
     if msg is not None:
-        error_write("Error: " + msg + "\n")
+        error_write(f"Error: {msg}" + "\n")
 
     backend_descr = "\n".join([ "    %-15s %s" % (n, d)
                                 for n,d in tracetool.backend.get_list() ])
@@ -83,34 +83,34 @@ def main(args):
     target_name = None
     probe_prefix = None
     for opt, arg in opts:
-        if opt == "--help":
-            error_opt()
+        if opt == '--probe-prefix':
+            probe_prefix = arg
 
+        elif opt == '--target-name':
+            target_name = arg
+        elif opt == '--target-type':
+            target_type = arg
         elif opt == "--backends":
             arg_backends = arg.split(",")
-        elif opt == "--group":
-            arg_group = arg
+        elif opt == "--binary":
+            binary = arg
+        elif opt == "--check-backends":
+            check_backends = True
+
         elif opt == "--format":
             arg_format = arg
+
+        elif opt == "--group":
+            arg_group = arg
+        elif opt == "--help":
+            error_opt()
 
         elif opt == "--list-backends":
             public_backends = tracetool.backend.get_list(only_public = True)
             out(", ".join([ b for b,_ in public_backends ]))
             sys.exit(0)
-        elif opt == "--check-backends":
-            check_backends = True
-
-        elif opt == "--binary":
-            binary = arg
-        elif opt == '--target-type':
-            target_type = arg
-        elif opt == '--target-name':
-            target_name = arg
-        elif opt == '--probe-prefix':
-            probe_prefix = arg
-
         else:
-            error_opt("unhandled option: %s" % opt)
+            error_opt(f"unhandled option: {opt}")
 
     if len(arg_backends) == 0:
         error_opt("no backends specified")

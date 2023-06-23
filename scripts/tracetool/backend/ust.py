@@ -19,21 +19,23 @@ PUBLIC = True
 
 
 def generate_h_begin(events, group):
-    header = 'trace-ust-' + group + '.h'
-    out('#include <lttng/tracepoint.h>',
-        '#include "%s"' % header,
+    header = f'trace-ust-{group}.h'
+    out(
+        '#include <lttng/tracepoint.h>',
+        f'#include "{header}"',
         '',
         '/* tracepoint_enabled() was introduced in LTTng UST 2.7 */',
         '#ifndef tracepoint_enabled',
         '#define tracepoint_enabled(a, b) true',
         '#endif',
-        '')
+        '',
+    )
 
 
 def generate_h(event, group):
     argnames = ", ".join(event.args.names())
     if len(event.args) > 0:
-        argnames = ", " + argnames
+        argnames = f", {argnames}"
 
     out('    tracepoint(qemu, %(name)s%(tp_args)s);',
         name=event.name,

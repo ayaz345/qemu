@@ -156,9 +156,7 @@ class FuzzyJSON(ast.NodeTransformer):
             return ast.Constant(value=True)
         if node.id == 'false':
             return ast.Constant(value=False)
-        if node.id == 'null':
-            return ast.Constant(value=None)
-        return node
+        return ast.Constant(value=None) if node.id == 'null' else node
 
 
 class QMPShell(QEMUMonitorProtocol):
@@ -301,12 +299,10 @@ class QMPShell(QEMUMonitorProtocol):
             if len(cmdargs) > 1:
                 msg = 'Unexpected input after close of Transaction sub-shell'
                 raise QMPShellError(msg)
-            qmpcmd = {
+            return {
                 'execute': 'transaction',
-                'arguments': {'actions': self._actions}
+                'arguments': {'actions': self._actions},
             }
-            return qmpcmd
-
         # No args, or no args remaining
         if not cmdargs:
             return None
@@ -331,7 +327,7 @@ class QMPShell(QEMUMonitorProtocol):
         jsobj = json.dumps(qmp_message,
                            indent=4 if self.pretty else None,
                            sort_keys=self.pretty)
-        print(str(jsobj), file=fh)
+        print(jsobj, file=fh)
 
     def _execute_cmd(self, cmdline: str) -> bool:
         try:
@@ -380,9 +376,7 @@ class QMPShell(QEMUMonitorProtocol):
         """
         Return the current shell prompt, including a trailing space.
         """
-        if self._transmode:
-            return 'TRANS> '
-        return '(QEMU) '
+        return 'TRANS> ' if self._transmode else '(QEMU) '
 
     def read_exec_command(self) -> bool:
         """
@@ -439,17 +433,14 @@ class HMPShell(QMPShell):
                     # Command in the form 'foobar|f' or 'f|foobar', take the
                     # full name
                     opt = name.split('|')
-                    if len(opt[0]) == 1:
-                        name = opt[1]
-                    else:
-                        name = opt[0]
+                    name = opt[1] if len(opt[0]) == 1 else opt[0]
                 self._completer.append(name)
-                self._completer.append('help ' + name)  # help completion
+                self._completer.append(f'help {name}')
 
     def _info_completion(self) -> None:
         for cmd in self._cmd_passthrough('info')['return'].split('\r\n'):
             if cmd:
-                self._completer.append('info ' + cmd.split()[1])
+                self._completer.append(f'info {cmd.split()[1]}')
 
     def _other_completion(self) -> None:
         # special cases
@@ -493,7 +484,7 @@ class HMPShell(QMPShell):
                 print(resp['return'], end=' ')
         else:
             # Error
-            print('%s: %s' % (resp['error']['class'], resp['error']['desc']))
+            print(f"{resp['error']['class']}: {resp['error']['desc']}")
         return True
 
     def show_banner(self, msg: str = 'Welcome to the HMP shell!') -> None:
@@ -578,7 +569,7 @@ def main_wrap() -> None:
         cmd = ["qemu-system-x86_64"]
 
     sockpath = "qmp-shell-wrap-%d" % os.getpid()
-    cmd += ["-qmp", "unix:%s" % sockpath]
+    cmd += ["-qmp", f"unix:{sockpath}"]
 
     shell_class = HMPShell if args.hmp else QMPShell
 

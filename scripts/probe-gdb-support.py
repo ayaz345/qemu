@@ -62,8 +62,8 @@ def do_probe(gdb):
 
     valid_arches = set()
 
-    if m.group(1):
-        for arch in m.group(1).split(", "):
+    if m[1]:
+        for arch in m[1].split(", "):
             if arch in mappings:
                 mapping = mappings[arch]
                 if isinstance(mapping, str):

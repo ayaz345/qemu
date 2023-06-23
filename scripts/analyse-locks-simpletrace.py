@@ -20,7 +20,7 @@ class MutexAnalyser(simpletrace.Analyzer):
         self.mutex_records = {}
 
     def _get_mutex(self, mutex):
-        if not mutex in self.mutex_records:
+        if mutex not in self.mutex_records:
             self.mutex_records[mutex] = {"locks": 0,
                                          "lock_time": 0,
                                          "acquire_times": [],

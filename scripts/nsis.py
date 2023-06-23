@@ -13,10 +13,10 @@ import tempfile
 
 
 def signcode(path):
-    cmd = os.environ.get("SIGNCODE")
-    if not cmd:
+    if cmd := os.environ.get("SIGNCODE"):
+        subprocess.run([cmd, path])
+    else:
         return
-    subprocess.run([cmd, path])
 
 def find_deps(exe_or_dll, search_path, analyzed_deps):
     deps = [exe_or_dll]
@@ -56,12 +56,12 @@ def main():
     prefix = os.path.splitdrive(args.prefix)[1]
     destdir = tempfile.mkdtemp()
     try:
-        subprocess.run(["make", "install", "DESTDIR=" + destdir])
-        with open(
-            os.path.join(destdir + prefix, "system-emulations.nsh"), "w"
-        ) as nsh, open(
-            os.path.join(destdir + prefix, "system-mui-text.nsh"), "w"
-        ) as muinsh:
+        subprocess.run(["make", "install", f"DESTDIR={destdir}"])
+        with (open(
+                    os.path.join(destdir + prefix, "system-emulations.nsh"), "w"
+                ) as nsh, open(
+                    os.path.join(destdir + prefix, "system-mui-text.nsh"), "w"
+                ) as muinsh):
             for exe in sorted(glob.glob(
                 os.path.join(destdir + prefix, "qemu-system-*.exe")
             )):
@@ -78,9 +78,9 @@ def main():
                     )
                 )
                 if arch.endswith('w'):
-                    desc = arch[:-1] + " emulation (GUI)."
+                    desc = f"{arch[:-1]} emulation (GUI)."
                 else:
-                    desc = arch + " emulation."
+                    desc = f"{arch} emulation."
 
                 muinsh.write(
                     """
@@ -88,7 +88,7 @@ def main():
                 """.format(arch, desc))
 
         search_path = args.dlldir
-        print("Searching '%s' for the dependent dlls ..." % search_path)
+        print(f"Searching '{search_path}' for the dependent dlls ...")
         dlldir = os.path.join(destdir + prefix, "dll")
         os.mkdir(dlldir)
 
@@ -104,21 +104,21 @@ def main():
                 dllfile = os.path.join(dlldir, os.path.basename(dep))
                 if (os.path.exists(dllfile)):
                     continue
-                print("Copying '%s' to '%s'" % (dep, dllfile))
+                print(f"Copying '{dep}' to '{dllfile}'")
                 shutil.copy(dep, dllfile)
 
         makensis = [
             "makensis",
             "-V2",
             "-NOCD",
-            "-DSRCDIR=" + args.srcdir,
-            "-DBINDIR=" + destdir + prefix,
+            f"-DSRCDIR={args.srcdir}",
+            f"-DBINDIR={destdir}{prefix}",
         ]
         if args.cpu == "x86_64":
             makensis += ["-DW64"]
-        makensis += ["-DDLLDIR=" + dlldir]
+        makensis += [f"-DDLLDIR={dlldir}"]
 
-        makensis += ["-DOUTFILE=" + args.outfile] + args.nsisargs
+        makensis += [f"-DOUTFILE={args.outfile}"] + args.nsisargs
         subprocess.run(makensis)
         signcode(args.outfile)
     finally:

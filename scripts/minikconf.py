@@ -66,7 +66,7 @@ class KconfigData:
             self.lhs = lhs
             self.rhs = rhs
         def __str__(self):
-            return "(%s && %s)" % (self.lhs, self.rhs)
+            return f"({self.lhs} && {self.rhs})"
 
         def add_edges_to(self, var):
             self.lhs.add_edges_to(var)
@@ -79,7 +79,7 @@ class KconfigData:
             self.lhs = lhs
             self.rhs = rhs
         def __str__(self):
-            return "(%s || %s)" % (self.lhs, self.rhs)
+            return f"({self.lhs} || {self.rhs})"
 
         def add_edges_to(self, var):
             self.lhs.add_edges_to(var)
@@ -91,7 +91,7 @@ class KconfigData:
         def __init__(self, lhs):
             self.lhs = lhs
         def __str__(self):
-            return "!%s" % (self.lhs)
+            return f"!{self.lhs}"
 
         def add_edges_to(self, var):
             self.lhs.add_edges_to(var)
@@ -103,20 +103,20 @@ class KconfigData:
             self.name = name
             self.value = None
             self.outgoing = set()
-            self.clauses_for_var = list()
+            self.clauses_for_var = []
         def __str__(self):
             return self.name
 
         def has_value(self):
-            return not (self.value is None)
+            return self.value is not None
         def set_value(self, val, clause):
             self.clauses_for_var.append(clause)
             if self.has_value() and self.value != val:
-                print("The following clauses were found for " + self.name)
+                print(f"The following clauses were found for {self.name}")
                 for i in self.clauses_for_var:
-                    print("    " + str(i), file=sys.stderr)
-                raise KconfigDataError('contradiction between clauses when setting %s' % self)
-            debug_print("=> %s is now %s" % (self.name, val))
+                    print(f"    {str(i)}", file=sys.stderr)
+                raise KconfigDataError(f'contradiction between clauses when setting {self}')
+            debug_print(f"=> {self.name} is now {val}")
             self.value = val
 
         # depth first search of the dependency graph
@@ -132,7 +132,7 @@ class KconfigData:
             self.outgoing.add(var)
         def evaluate(self):
             if not self.has_value():
-                raise KconfigDataError('cycle found including %s' % self)
+                raise KconfigDataError(f'cycle found including {self}')
             return self.value
 
     class Clause:
@@ -148,7 +148,7 @@ class KconfigData:
             KconfigData.Clause.__init__(self, dest)
             self.value = value
         def __str__(self):
-            return "CONFIG_%s=%s" % (self.dest, 'y' if self.value else 'n')
+            return f"CONFIG_{self.dest}={'y' if self.value else 'n'}"
 
         def process(self):
             self.dest.set_value(self.value, self)
@@ -158,14 +158,14 @@ class KconfigData:
             KconfigData.Clause.__init__(self, dest)
             self.value = value
             self.cond = cond
-            if not (self.cond is None):
+            if self.cond is not None:
                 self.cond.add_edges_to(self.dest)
         def __str__(self):
             value = 'y' if self.value else 'n'
             if self.cond is None:
-                return "config %s default %s" % (self.dest, value)
+                return f"config {self.dest} default {value}"
             else:
-                return "config %s default %s if %s" % (self.dest, value, self.cond)
+                return f"config {self.dest} default {value} if {self.cond}"
 
         def priority(self):
             # Defaults are processed just before leaving the variable
@@ -181,7 +181,7 @@ class KconfigData:
             self.expr = expr
             self.expr.add_edges_to(self.dest)
         def __str__(self):
-            return "config %s depends on %s" % (self.dest, self.expr)
+            return f"config {self.dest} depends on {self.expr}"
 
         def process(self):
             if not self.expr.evaluate():
@@ -193,7 +193,7 @@ class KconfigData:
             self.cond = cond
             self.cond.add_edges_to(self.dest)
         def __str__(self):
-            return "select %s if %s" % (self.dest, self.cond)
+            return f"select {self.dest} if {self.cond}"
 
         def process(self):
             if self.cond.evaluate():
@@ -204,24 +204,22 @@ class KconfigData:
         self.previously_included = []
         self.incl_info = None
         self.defined_vars = set()
-        self.referenced_vars = dict()
-        self.clauses = list()
+        self.referenced_vars = {}
+        self.clauses = []
 
     # semantic analysis -------------
 
     def check_undefined(self):
         undef = False
         for i in self.referenced_vars:
-            if not (i in self.defined_vars):
-                print("undefined symbol %s" % (i), file=sys.stderr)
+            if i not in self.defined_vars:
+                print(f"undefined symbol {i}", file=sys.stderr)
                 undef = True
         return undef
 
     def compute_config(self):
         if self.check_undefined():
             raise KconfigDataError("there were undefined symbols")
-            return None
-
         debug_print("Input:")
         for clause in self.clauses:
             debug_print(clause)
@@ -231,7 +229,7 @@ class KconfigData:
             debug_print(i, "->", [str(x) for x in self.referenced_vars[i].outgoing])
 
         # The reverse of the depth-first order is the topological sort
-        dfo = dict()
+        dfo = {}
         visited = set()
         debug_print("\n")
         def visit_fn(var):
@@ -253,7 +251,7 @@ class KconfigData:
             clause.process()
 
         debug_print("")
-        values = dict()
+        values = {}
         for name, v in self.referenced_vars.items():
             debug_print("Evaluating", name)
             values[name] = v.evaluate()
@@ -264,7 +262,7 @@ class KconfigData:
 
     def do_declaration(self, var):
         if (var in self.defined_vars):
-            raise KconfigDataError('variable "' + var + '" defined twice')
+            raise KconfigDataError(f'variable "{var}" defined twice')
 
         self.defined_vars.add(var.name)
 
@@ -302,44 +300,64 @@ class KconfigData:
 # -------------------------------------------
 
 # tokens table
-TOKENS = {}
 TOK_NONE = -1
-TOK_LPAREN = 0;   TOKENS[TOK_LPAREN] = '"("';
-TOK_RPAREN = 1;   TOKENS[TOK_RPAREN] = '")"';
-TOK_EQUAL = 2;    TOKENS[TOK_EQUAL] = '"="';
-TOK_AND = 3;      TOKENS[TOK_AND] = '"&&"';
-TOK_OR = 4;       TOKENS[TOK_OR] = '"||"';
-TOK_NOT = 5;      TOKENS[TOK_NOT] = '"!"';
-TOK_DEPENDS = 6;  TOKENS[TOK_DEPENDS] = '"depends"';
-TOK_ON = 7;       TOKENS[TOK_ON] = '"on"';
-TOK_SELECT = 8;   TOKENS[TOK_SELECT] = '"select"';
-TOK_IMPLY = 9;    TOKENS[TOK_IMPLY] = '"imply"';
-TOK_CONFIG = 10;  TOKENS[TOK_CONFIG] = '"config"';
-TOK_DEFAULT = 11; TOKENS[TOK_DEFAULT] = '"default"';
-TOK_Y = 12;       TOKENS[TOK_Y] = '"y"';
-TOK_N = 13;       TOKENS[TOK_N] = '"n"';
-TOK_SOURCE = 14;  TOKENS[TOK_SOURCE] = '"source"';
-TOK_BOOL = 15;    TOKENS[TOK_BOOL] = '"bool"';
-TOK_IF = 16;      TOKENS[TOK_IF] = '"if"';
-TOK_ID = 17;      TOKENS[TOK_ID] = 'identifier';
-TOK_EOF = 18;     TOKENS[TOK_EOF] = 'end of file';
+TOK_LPAREN = 0
+TOK_RPAREN = 1
+TOK_EQUAL = 2
+TOK_AND = 3
+TOK_OR = 4
+TOKENS = {
+    TOK_LPAREN: '"("',
+    TOK_RPAREN: '")"',
+    TOK_EQUAL: '"="',
+    TOK_AND: '"&&"',
+    TOK_OR: '"||"',
+}
+TOK_NOT = 5
+TOKENS[TOK_NOT] = '"!"';
+TOK_DEPENDS = 6
+TOKENS[TOK_DEPENDS] = '"depends"';
+TOK_ON = 7
+TOKENS[TOK_ON] = '"on"';
+TOK_SELECT = 8
+TOKENS[TOK_SELECT] = '"select"';
+TOK_IMPLY = 9
+TOKENS[TOK_IMPLY] = '"imply"';
+TOK_CONFIG = 10
+TOKENS[TOK_CONFIG] = '"config"';
+TOK_DEFAULT = 11
+TOKENS[TOK_DEFAULT] = '"default"';
+TOK_Y = 12
+TOKENS[TOK_Y] = '"y"';
+TOK_N = 13
+TOKENS[TOK_N] = '"n"';
+TOK_SOURCE = 14
+TOKENS[TOK_SOURCE] = '"source"';
+TOK_BOOL = 15
+TOKENS[TOK_BOOL] = '"bool"';
+TOK_IF = 16
+TOKENS[TOK_IF] = '"if"';
+TOK_ID = 17
+TOKENS[TOK_ID] = 'identifier';
+TOK_EOF = 18
+TOKENS[TOK_EOF] = 'end of file';
 
 class KconfigParserError(Exception):
     def __init__(self, parser, msg, tok=None):
         self.loc = parser.location()
         tok = tok or parser.tok
         if tok != TOK_NONE:
-            location = TOKENS.get(tok, None) or ('"%s"' % tok)
-            msg = '%s before %s' % (msg, location)
+            location = TOKENS.get(tok, None) or f'"{tok}"'
+            msg = f'{msg} before {location}'
         self.msg = msg
 
     def __str__(self):
-        return "%s: %s" % (self.loc, self.msg)
+        return f"{self.loc}: {self.msg}"
 
 class KconfigParser:
 
     @classmethod
-    def parse(self, fp, mode=None):
+    def parse(cls, fp, mode=None):
         data = KconfigData(mode or KconfigParser.defconfig)
         parser = KconfigParser(data)
         parser.parse_file(fp)
@@ -381,10 +399,7 @@ class KconfigParser:
     def location(self):
         col = 1
         for ch in self.src[self.line_pos:self.pos]:
-            if ch == '\t':
-                col += 8 - ((col - 1) % 8)
-            else:
-                col += 1
+            col += 8 - ((col - 1) % 8) if ch == '\t' else 1
         return '%s%s:%d:%d' %(self.error_path(), self.fname, self.line, col)
 
     def do_include(self, include):
@@ -394,8 +409,7 @@ class KconfigParser:
         inf = self.data.incl_info
         while inf:
             if incl_abs_fname == os.path.abspath(inf['file']):
-                raise KconfigParserError(self, "Inclusion loop for %s"
-                                    % include)
+                raise KconfigParserError(self, f"Inclusion loop for {include}")
             inf = inf['parent']
 
         # skip multiple include of the same file
@@ -404,8 +418,7 @@ class KconfigParser:
         try:
             fp = open(incl_abs_fname, 'rt', encoding='utf-8')
         except IOError as e:
-            raise KconfigParserError(self,
-                                '%s: %s' % (e.strerror, include))
+            raise KconfigParserError(self, f'{e.strerror}: {include}')
 
         inf = self.data.incl_info
         self.data.incl_info = { 'file': self.fname, 'line': self.line,
@@ -427,24 +440,22 @@ class KconfigParser:
 
     # var: ID
     def parse_var(self):
-        if self.tok == TOK_ID:
-            val = self.val
-            self.get_token()
-            return self.data.do_var(val)
-        else:
+        if self.tok != TOK_ID:
             raise KconfigParserError(self, 'Expected identifier')
+        val = self.val
+        self.get_token()
+        return self.data.do_var(val)
 
     # assignment_var: ID (starting with "CONFIG_")
     def parse_assignment_var(self):
-        if self.tok == TOK_ID:
-            val = self.val
-            if not val.startswith("CONFIG_"):
-                raise KconfigParserError(self,
-                           'Expected identifier starting with "CONFIG_"', TOK_NONE)
-            self.get_token()
-            return self.data.do_var(val[7:])
-        else:
+        if self.tok != TOK_ID:
             raise KconfigParserError(self, 'Expected identifier')
+        val = self.val
+        if not val.startswith("CONFIG_"):
+            raise KconfigParserError(self,
+                       'Expected identifier starting with "CONFIG_"', TOK_NONE)
+        self.get_token()
+        return self.data.do_var(val[7:])
 
     # assignment: var EQUAL y_or_n
     def parse_assignment(self):
@@ -492,11 +503,10 @@ class KconfigParser:
     # condition: IF expr
     #       | empty
     def parse_condition(self):
-        if self.tok == TOK_IF:
-            self.get_token()
-            return self.parse_expr()
-        else:
+        if self.tok != TOK_IF:
             return None
+        self.get_token()
+        return self.parse_expr()
 
     # property: DEFAULT y_or_n condition
     #       | DEPENDS ON expr
@@ -533,26 +543,22 @@ class KconfigParser:
     #       | /* empty */
     def parse_properties(self, var):
         had_default = False
-        while self.tok == TOK_DEFAULT or self.tok == TOK_DEPENDS or \
-              self.tok == TOK_SELECT or self.tok == TOK_BOOL or \
-              self.tok == TOK_IMPLY:
+        while self.tok in [TOK_DEFAULT, TOK_DEPENDS, TOK_SELECT, TOK_BOOL, TOK_IMPLY]:
             self.parse_property(var)
 
         # for nicer error message
-        if self.tok != TOK_SOURCE and self.tok != TOK_CONFIG and \
-           self.tok != TOK_ID and self.tok != TOK_EOF:
+        if self.tok not in [TOK_SOURCE, TOK_CONFIG, TOK_ID, TOK_EOF]:
             raise KconfigParserError(self, 'expected "source", "config", identifier, '
                     + '"default", "depends on", "imply" or "select"')
 
     # declaration: config var properties
     def parse_declaration(self):
-        if self.tok == TOK_CONFIG:
-            self.get_token()
-            var = self.parse_var()
-            self.data.do_declaration(var)
-            self.parse_properties(var)
-        else:
+        if self.tok != TOK_CONFIG:
             raise KconfigParserError(self, 'Error in recursive descent?')
+        self.get_token()
+        var = self.parse_var()
+        self.data.do_declaration(var)
+        self.parse_properties(var)
 
     # clause: SOURCE
     #       | declaration
@@ -679,11 +685,11 @@ if __name__ == '__main__':
             del argv[1]
 
     if len(argv) == 1:
-        print ("%s: at least one argument is required" % argv[0], file=sys.stderr)
+        print(f"{argv[0]}: at least one argument is required", file=sys.stderr)
         sys.exit(1)
 
     if argv[1].startswith('-'):
-        print ("%s: invalid option %s" % (argv[0], argv[1]), file=sys.stderr)
+        print(f"{argv[0]}: invalid option {argv[1]}", file=sys.stderr)
         sys.exit(1)
 
     data = KconfigData(mode)
@@ -696,16 +702,13 @@ if __name__ == '__main__':
             parser.do_assignment(name, value == 'y')
             external_vars.add(name[7:])
         else:
-            fp = open(arg, 'rt', encoding='utf-8')
-            parser.parse_file(fp)
-            fp.close()
-
+            with open(arg, 'rt', encoding='utf-8') as fp:
+                parser.parse_file(fp)
     config = data.compute_config()
     for key in sorted(config.keys()):
         if key not in external_vars and config[key]:
-            print ('CONFIG_%s=y' % key)
+            print(f'CONFIG_{key}=y')
 
-    deps = open(argv[2], 'wt', encoding='utf-8')
-    for fname in data.previously_included:
-        print ('%s: %s' % (argv[1], fname), file=deps)
-    deps.close()
+    with open(argv[2], 'wt', encoding='utf-8') as deps:
+        for fname in data.previously_included:
+            print(f'{argv[1]}: {fname}', file=deps)

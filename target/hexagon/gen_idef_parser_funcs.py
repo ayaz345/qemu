@@ -97,7 +97,7 @@ def main():
             }:
                 continue
             ## Skip other unsupported instructions
-            if tag == "S2_cabacdecbin" or tag == "A5_ACS":
+            if tag in ["S2_cabacdecbin", "A5_ACS"]:
                 continue
             if tag.startswith("Y"):
                 continue
@@ -121,10 +121,12 @@ def main():
                 continue
             ## Skip instructions that are incompatible with short-circuit
             ## packet register writes
-            if ( tag == 'S2_insert' or
-                 tag == 'S2_insert_rp' or
-                 tag == 'S2_asr_r_svw_trun' or
-                 tag == 'A2_swiz' ):
+            if tag in [
+                'S2_insert',
+                'S2_insert_rp',
+                'S2_asr_r_svw_trun',
+                'A2_swiz',
+            ]:
                 continue
 
             regs = tagregs[tag]
@@ -149,9 +151,10 @@ def main():
                 else:
                     hex_common.bad_register(regtype, regid)
 
-            for immlett, bits, immshift in imms:
-                arguments.append(hex_common.imm_name(immlett))
-
+            arguments.extend(
+                hex_common.imm_name(immlett)
+                for immlett, bits, immshift in imms
+            )
             f.write(f"{tag}({', '.join(arguments)}) {{\n")
             f.write("    ")
             if hex_common.need_ea(tag):

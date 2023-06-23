@@ -21,10 +21,7 @@ def opt_compare(a: T, b: T) -> bool:
 def merge(a: T, b: T) -> T:
     """Merge two values if they matched using opt_compare()"""
     assert opt_compare(a, b)
-    if a is None:
-        return b
-    else:
-        return a
+    return b if a is None else a
 
 def test_comp_merge():
     assert opt_compare(None, 1) == True

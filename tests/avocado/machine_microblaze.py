@@ -25,7 +25,7 @@ class MicroblazeMachine(QemuSystemTest):
         file_path = self.fetch_asset(tar_url, asset_hash=tar_hash)
         archive.extract(file_path, self.workdir)
         self.vm.set_console()
-        self.vm.add_args('-kernel', self.workdir + '/day17/ballerina.bin')
+        self.vm.add_args('-kernel', f'{self.workdir}/day17/ballerina.bin')
         self.vm.launch()
         wait_for_console_pattern(self, 'This architecture does not have '
                                        'kernel memory protection')

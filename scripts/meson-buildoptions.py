@@ -81,7 +81,7 @@ def wrap(left, text, indent):
         yield left
         left = spaces
     else:
-        left = (left + spaces)[0:indent]
+        left = (left + spaces)[:indent]
     yield from textwrap.wrap(
         text, width=LINE_WIDTH, initial_indent=left, subsequent_indent=spaces
     )
@@ -95,12 +95,12 @@ def help_line(left, opt, indent, long):
     right = f'{opt["description"]}'
     if long:
         value = get_help(opt)
-        if value != "auto" and value != "":
+        if value not in ["auto", ""]:
             right += f" [{value}]"
     if "choices" in opt and long:
         choices = "/".join(sorted(opt["choices"]))
         right += f" (choices: {choices})"
-    for x in wrap("  " + left, right, indent):
+    for x in wrap(f"  {left}", right, indent):
         sh_print(x)
 
 
@@ -144,9 +144,7 @@ def load_options(json):
 
 def cli_option(opt):
     name = opt["name"]
-    if name in OPTION_NAMES:
-        return OPTION_NAMES[name]
-    return name.replace("_", "-")
+    return OPTION_NAMES[name] if name in OPTION_NAMES else name.replace("_", "-")
 
 
 def cli_help_key(opt):
@@ -205,7 +203,7 @@ def print_parse(options):
         key = cli_option(opt)
         name = opt["name"]
         if require_arg(opt):
-            if opt["type"] == "array" and not "choices" in opt:
+            if opt["type"] == "array" and "choices" not in opt:
                 print(f'    --{key}=*) quote_sh "-D{name}=$(meson_option_build_array $2)" ;;')
             else:
                 print(f'    --{key}=*) quote_sh "-D{name}=$2" ;;')

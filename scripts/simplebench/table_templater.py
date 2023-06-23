@@ -50,13 +50,13 @@ class Templater:
         result = []
 
         for x in self.tree.children:
-            if x.data == 'text':
-                result.append(x.children[0].value)
-            elif x.data == 'column_switch':
+            if x.data == 'column_switch':
                 result.append(column[i])
                 i += 1
             elif x.data == 'row_switch':
                 result.append(row[j])
                 j += 1
 
+            elif x.data == 'text':
+                result.append(x.children[0].value)
         return ''.join(result)

@@ -152,10 +152,12 @@ class QAPISchemaGenRSTVisitor(QAPISchemaVisitor):
         'when tagname is variant (If: ...)' suitable for use in
         the 'variants' part of a definition list.
         """
-        term = [nodes.Text(' when '),
-                nodes.literal('', variants.tag_member.name),
-                nodes.Text(' is '),
-                nodes.literal('', '"%s"' % variant.name)]
+        term = [
+            nodes.Text(' when '),
+            nodes.literal('', variants.tag_member.name),
+            nodes.Text(' is '),
+            nodes.literal('', f'"{variant.name}"'),
+        ]
         if variant.ifcond.is_present():
             term.extend(self._nodes_for_ifcond(variant.ifcond))
         return term
@@ -214,11 +216,7 @@ class QAPISchemaGenRSTVisitor(QAPISchemaVisitor):
             if section.member.ifcond.is_present():
                 termtext.extend(self._nodes_for_ifcond(section.member.ifcond))
             # TODO drop fallbacks when undocumented members are outlawed
-            if section.text:
-                defn = section.text
-            else:
-                defn = [nodes.Text('Not documented')]
-
+            defn = section.text if section.text else [nodes.Text('Not documented')]
             dlnode += self._make_dlitem(termtext, defn)
             seen_item = True
 
@@ -301,8 +299,11 @@ class QAPISchemaGenRSTVisitor(QAPISchemaVisitor):
 
         doc = self._cur_doc
         snode = nodes.section(ids=[self._sphinx_directive.new_serialno()])
-        snode += nodes.title('', '', *[nodes.literal(doc.symbol, doc.symbol),
-                                       nodes.Text(' (' + typ + ')')])
+        snode += nodes.title(
+            '',
+            '',
+            *[nodes.literal(doc.symbol, doc.symbol), nodes.Text(f' ({typ})')],
+        )
         self._parse_text_into_node(doc.body.text, snode)
         for s in sections:
             if s is not None:
@@ -473,7 +474,7 @@ class QAPISchemaGenDepVisitor(QAPISchemaVisitor):
 
     def visit_module(self, name):
         if name != "./builtin":
-            qapifile = self._qapidir + '/' + name
+            qapifile = f'{self._qapidir}/{name}'
             self._env.note_dependency(os.path.abspath(qapifile))
         super().visit_module(name)
 
@@ -494,7 +495,7 @@ class QAPIDocDirective(Directive):
 
     def run(self):
         env = self.state.document.settings.env
-        qapifile = env.config.qapidoc_srctree + '/' + self.arguments[0]
+        qapifile = f'{env.config.qapidoc_srctree}/{self.arguments[0]}'
         qapidir = os.path.dirname(qapifile)
 
         try:

@@ -50,7 +50,7 @@ def write_setup_dir(dirpath: str, privkey_pem: bytes, cert_pem: bytes,
 
     # Counter
     with open(f'{dirpath}/counter', 'w') as f:
-        f.write(f'{str(counter)}\n')
+        f.write(f'{counter}\n')
 
 
 def generate_ec_key_pair() -> Tuple[str, str]:

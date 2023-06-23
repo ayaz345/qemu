@@ -35,10 +35,7 @@ class TuxRunBaselineTest(QemuSystemTest):
         """
         utag = self._get_unique_tag_val(tagname)
         print(f"{tagname}/{default} -> {utag}")
-        if utag:
-            return utag
-
-        return default
+        return utag if utag else default
 
     def setUp(self):
         super().setUp()
@@ -95,9 +92,9 @@ class TuxRunBaselineTest(QemuSystemTest):
         kernel_image =  self.fetch_asset(base_url + self.image,
                                          asset_hash = ksum,
                                          algorithm = "sha256")
-        disk_image_zst = self.fetch_asset(base_url + "rootfs.ext4.zst",
-                                         asset_hash = isum,
-                                         algorithm = "sha256")
+        disk_image_zst = self.fetch_asset(
+            f"{base_url}rootfs.ext4.zst", asset_hash=isum, algorithm="sha256"
+        )
 
         cmd = f"{self.zstd} -d {disk_image_zst} -o {self.workdir}/rootfs.ext4"
         process.run(cmd)
@@ -110,7 +107,7 @@ class TuxRunBaselineTest(QemuSystemTest):
         else:
             dtb = None
 
-        return (kernel_image, self.workdir + "/rootfs.ext4", dtb)
+        return kernel_image, f"{self.workdir}/rootfs.ext4", dtb
 
     def prepare_run(self, kernel, disk, drive, dtb=None, console_index=0):
         """
@@ -118,14 +115,11 @@ class TuxRunBaselineTest(QemuSystemTest):
         """
         self.vm.set_console(console_index=console_index)
 
-        # all block devices are raw ext4's
-        blockdev = "driver=raw,file.driver=file," \
-            + f"file.filename={disk},node-name=hd0"
-
         kcmd_line = self.KERNEL_COMMON_COMMAND_LINE
         kcmd_line += f" root=/dev/{self.root}"
         kcmd_line += f" console={self.console}"
 
+        blockdev = f"driver=raw,file.driver=file,file.filename={disk},node-name=hd0"
         self.vm.add_args('-kernel', kernel,
                          '-append', kcmd_line,
                          '-blockdev', blockdev)
@@ -228,16 +222,20 @@ class TuxRunBaselineTest(QemuSystemTest):
 
         # Create a temporary qcow2 and launch the test-case
         with tempfile.NamedTemporaryFile(prefix=prefix,
-                                         suffix='.qcow2') as qcow2:
-            process.run(self.qemu_img + ' create -f qcow2 ' +
-                        qcow2.name + ' 1G')
+                                             suffix='.qcow2') as qcow2:
+            process.run(f'{self.qemu_img} create -f qcow2 {qcow2.name} 1G')
 
-            self.vm.add_args('-drive', 'file=' + qcow2.name +
-                         ',format=qcow2,if=none,id='
-                         'drive-virtio-disk1',
-                         '-device', 'virtio-blk-pci,scsi=off,bus=pci.0,'
-                         'addr=0xb,drive=drive-virtio-disk1,id=virtio-disk1'
-                         ',bootindex=2')
+            self.vm.add_args(
+                '-drive',
+                (
+                    f'file={qcow2.name}' + ',format=qcow2,if=none,id='
+                    'drive-virtio-disk1'
+                ),
+                '-device',
+                'virtio-blk-pci,scsi=off,bus=pci.0,'
+                'addr=0xb,drive=drive-virtio-disk1,id=virtio-disk1'
+                ',bootindex=2',
+            )
             self.common_tuxrun(csums=sums, drive="scsi-hd")
 
     #

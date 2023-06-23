@@ -35,9 +35,12 @@ class S390CCWVirtioMachine(QemuSystemTest):
 
     dmesg_clear_count = 1
     def clear_guest_dmesg(self):
-        exec_command_and_wait_for_pattern(self, 'dmesg -c > /dev/null; '
-                    'echo dm_clear\ ' + str(self.dmesg_clear_count),
-                    'dm_clear ' + str(self.dmesg_clear_count))
+        exec_command_and_wait_for_pattern(
+            self,
+            'dmesg -c > /dev/null; '
+            'echo dm_clear\ ' + str(self.dmesg_clear_count),
+            f'dm_clear {str(self.dmesg_clear_count)}',
+        )
         self.dmesg_clear_count += 1
 
     def test_s390x_devices(self):
@@ -47,10 +50,12 @@ class S390CCWVirtioMachine(QemuSystemTest):
         :avocado: tags=machine:s390-ccw-virtio
         """
 
-        kernel_url = ('https://snapshot.debian.org/archive/debian/'
-                      '20201126T092837Z/dists/buster/main/installer-s390x/'
-                      '20190702+deb10u6/images/generic/kernel.debian')
         kernel_hash = '5821fbee57d6220a067a8b967d24595621aa1eb6'
+        kernel_url = (
+            'https://snapshot.debian.org/archive/debian/'
+            '20201126T092837Z/dists/buster/main/installer-s390x/'
+            '20190702+deb10u6/images/generic/kernel.debian'
+        )
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
         initrd_url = ('https://snapshot.debian.org/archive/debian/'
@@ -60,8 +65,7 @@ class S390CCWVirtioMachine(QemuSystemTest):
         initrd_path = self.fetch_asset(initrd_url, asset_hash=initrd_hash)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                              'console=sclp0 root=/dev/ram0 BOOT_DEBUG=3')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=sclp0 root=/dev/ram0 BOOT_DEBUG=3'
         self.vm.add_args('-nographic',
                          '-kernel', kernel_path,
                          '-initrd', initrd_path,
@@ -93,9 +97,9 @@ class S390CCWVirtioMachine(QemuSystemTest):
         # check that the device at 0.2.0000 is in legacy mode, while the
         # device at 0.3.1234 has the virtio-1 feature bit set
         virtio_rng_features="00000000000000000000000000001100" + \
-                            "10000000000000000000000000000000"
+                                "10000000000000000000000000000000"
         virtio_rng_features_legacy="00000000000000000000000000001100" + \
-                                   "00000000000000000000000000000000"
+                                       "00000000000000000000000000000000"
         exec_command_and_wait_for_pattern(self,
                         'cat /sys/bus/ccw/devices/0.2.0000/virtio?/features',
                         virtio_rng_features_legacy)
@@ -170,10 +174,12 @@ class S390CCWVirtioMachine(QemuSystemTest):
         :avocado: tags=device:virtio-net
         """
 
-        kernel_url = ('https://archives.fedoraproject.org/pub/archive'
-                      '/fedora-secondary/releases/31/Server/s390x/os'
-                      '/images/kernel.img')
         kernel_hash = 'b93d1efcafcf29c1673a4ce371a1f8b43941cfeb'
+        kernel_url = (
+            'https://archives.fedoraproject.org/pub/archive'
+            '/fedora-secondary/releases/31/Server/s390x/os'
+            '/images/kernel.img'
+        )
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
         initrd_url = ('https://archives.fedoraproject.org/pub/archive'
@@ -185,8 +191,7 @@ class S390CCWVirtioMachine(QemuSystemTest):
         archive.lzma_uncompress(initrd_path_xz, initrd_path)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE + ' audit=0 '
-                              'rd.plymouth=0 plymouth.enable=0 rd.rescue')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE} audit=0 rd.plymouth=0 plymouth.enable=0 rd.rescue'
         self.vm.add_args('-nographic',
                          '-smp', '4',
                          '-m', '512',

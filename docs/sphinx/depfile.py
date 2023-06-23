@@ -51,7 +51,7 @@ def write_depfile(app, exception):
         print((env.config.depfile_stamp or app.outdir) + ": \\", file=f)
         print(*get_infiles(env), file=f)
         for x in get_infiles(env):
-            print(x + ":", file=f)
+            print(f"{x}:", file=f)
 
 
 def setup(app):

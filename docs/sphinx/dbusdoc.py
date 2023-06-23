@@ -95,7 +95,7 @@ class DBusDoc:
         ]
         self.add_line(f":{access}:")
         if prop.emits_changed_signal:
-            self.add_line(f":emits-changed: yes")
+            self.add_line(":emits-changed: yes")
         self.add_line("")
         for line in prepare_docstring("\n" + prop.doc_string):
             self.add_line(line)
@@ -145,7 +145,7 @@ class DBusDocDirective(SphinxDirective):
         logger.debug("[dbusdoc] %s:%s: input:\n%s", source, lineno, self.block_text)
 
         env = self.state.document.settings.env
-        dbusfile = env.config.qapidoc_srctree + "/" + self.arguments[0]
+        dbusfile = f"{env.config.qapidoc_srctree}/{self.arguments[0]}"
         with open(dbusfile, "rb") as f:
             xml_data = f.read()
         xml = parse_dbus_xml(xml_data)

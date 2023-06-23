@@ -63,8 +63,8 @@ class LinuxKernelTest(QemuSystemTest):
         """
         cwd = os.getcwd()
         os.chdir(self.workdir)
-        file_path = process.run("ar t %s" % deb).stdout_text.split()[2]
-        process.run("ar x %s %s" % (deb, file_path))
+        file_path = process.run(f"ar t {deb}").stdout_text.split()[2]
+        process.run(f"ar x {deb} {file_path}")
         archive.extract(file_path, self.workdir)
         os.chdir(cwd)
         # Return complete path to extracted file.  Because callers to
@@ -86,7 +86,7 @@ class LinuxKernelTest(QemuSystemTest):
         """
         cwd = os.getcwd()
         os.chdir(self.workdir)
-        process.run("rpm2cpio %s | cpio -id %s" % (rpm, path), shell=True)
+        process.run(f"rpm2cpio {rpm} | cpio -id {path}", shell=True)
         os.chdir(cwd)
         return os.path.normpath(os.path.join(self.workdir, path))
 
@@ -109,11 +109,11 @@ class BootLinuxConsole(LinuxKernelTest):
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
         self.vm.set_console()
-        kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'console=ttyS0'
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0'
         self.vm.add_args('-kernel', kernel_path,
                          '-append', kernel_command_line)
         self.vm.launch()
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.wait_for_console_pattern(console_pattern)
 
     def test_mips_malta(self):
@@ -131,11 +131,11 @@ class BootLinuxConsole(LinuxKernelTest):
                                             '/boot/vmlinux-2.6.32-5-4kc-malta')
 
         self.vm.set_console()
-        kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'console=ttyS0'
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0'
         self.vm.add_args('-kernel', kernel_path,
                          '-append', kernel_command_line)
         self.vm.launch()
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.wait_for_console_pattern(console_pattern)
 
     def test_mips64el_malta(self):
@@ -163,11 +163,11 @@ class BootLinuxConsole(LinuxKernelTest):
                                             '/boot/vmlinux-2.6.32-5-5kc-malta')
 
         self.vm.set_console()
-        kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'console=ttyS0'
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0'
         self.vm.add_args('-kernel', kernel_path,
                          '-append', kernel_command_line)
         self.vm.launch()
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.wait_for_console_pattern(console_pattern)
 
     def test_mips64el_fuloong2e(self):
@@ -184,11 +184,11 @@ class BootLinuxConsole(LinuxKernelTest):
                                             '/boot/vmlinux-3.16.0-6-loongson-2e')
 
         self.vm.set_console()
-        kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'console=ttyS0'
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0'
         self.vm.add_args('-kernel', kernel_path,
                          '-append', kernel_command_line)
         self.vm.launch()
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.wait_for_console_pattern(console_pattern)
 
     def test_mips_malta_cpio(self):
@@ -197,10 +197,12 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=machine:malta
         :avocado: tags=endian:big
         """
-        deb_url = ('http://snapshot.debian.org/archive/debian/'
-                   '20160601T041800Z/pool/main/l/linux/'
-                   'linux-image-4.5.0-2-4kc-malta_4.5.5-1_mips.deb')
         deb_hash = 'a3c84f3e88b54e06107d65a410d1d1e8e0f340f8'
+        deb_url = (
+            'http://snapshot.debian.org/archive/debian/'
+            '20160601T041800Z/pool/main/l/linux/'
+            'linux-image-4.5.0-2-4kc-malta_4.5.5-1_mips.deb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinux-4.5.0-2-4kc-malta')
@@ -209,13 +211,11 @@ class BootLinuxConsole(LinuxKernelTest):
                       'mips/rootfs.cpio.gz')
         initrd_hash = 'bf806e17009360a866bf537f6de66590de349a99'
         initrd_path_gz = self.fetch_asset(initrd_url, asset_hash=initrd_hash)
-        initrd_path = self.workdir + "rootfs.cpio"
+        initrd_path = f"{self.workdir}rootfs.cpio"
         archive.gzip_uncompress(initrd_path_gz, initrd_path)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE
-                               + 'console=ttyS0 console=tty '
-                               + 'rdinit=/sbin/init noreboot')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0 console=tty rdinit=/sbin/init noreboot'
         self.vm.add_args('-kernel', kernel_path,
                          '-initrd', initrd_path,
                          '-append', kernel_command_line,
@@ -240,10 +240,12 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=endian:little
         :avocado: tags=cpu:5KEc
         """
-        kernel_url = ('https://github.com/philmd/qemu-testing-blob/'
-                      'raw/9ad2df38/mips/malta/mips64el/'
-                      'vmlinux-3.19.3.mtoman.20150408')
         kernel_hash = '00d1d268fb9f7d8beda1de6bebcc46e884d71754'
+        kernel_url = (
+            'https://github.com/philmd/qemu-testing-blob/'
+            'raw/9ad2df38/mips/malta/mips64el/'
+            'vmlinux-3.19.3.mtoman.20150408'
+        )
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
         initrd_url = ('https://github.com/groeck/linux-build-test/'
                       'raw/8584a59e/rootfs/'
@@ -251,13 +253,11 @@ class BootLinuxConsole(LinuxKernelTest):
         initrd_hash = '1dbb8a396e916847325284dbe2151167'
         initrd_path_gz = self.fetch_asset(initrd_url, algorithm='md5',
                                           asset_hash=initrd_hash)
-        initrd_path = self.workdir + "rootfs.cpio"
+        initrd_path = f"{self.workdir}rootfs.cpio"
         archive.gzip_uncompress(initrd_path_gz, initrd_path)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE
-                               + 'console=ttyS0 console=tty '
-                               + 'rdinit=/sbin/init noreboot')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0 console=tty rdinit=/sbin/init noreboot'
         self.vm.add_args('-kernel', kernel_path,
                          '-initrd', initrd_path,
                          '-append', kernel_command_line,
@@ -276,7 +276,7 @@ class BootLinuxConsole(LinuxKernelTest):
 
     def do_test_mips_malta32el_nanomips(self, kernel_url, kernel_hash):
         kernel_path_xz = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
-        kernel_path = self.workdir + "kernel"
+        kernel_path = f"{self.workdir}kernel"
         with lzma.open(kernel_path_xz, 'rb') as f_in:
             with open(kernel_path, 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
@@ -289,7 +289,7 @@ class BootLinuxConsole(LinuxKernelTest):
                          '-kernel', kernel_path,
                          '-append', kernel_command_line)
         self.vm.launch()
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.wait_for_console_pattern(console_pattern)
 
     def test_mips_malta32el_nanomips_4k(self):
@@ -342,11 +342,11 @@ class BootLinuxConsole(LinuxKernelTest):
         images_url = ('http://ports.ubuntu.com/ubuntu-ports/dists/'
                       'bionic-updates/main/installer-arm64/'
                       '20101020ubuntu543.19/images/')
-        kernel_url = images_url + 'netboot/ubuntu-installer/arm64/linux'
+        kernel_url = f'{images_url}netboot/ubuntu-installer/arm64/linux'
         kernel_hash = 'e167757620640eb26de0972f578741924abb3a82'
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
-        initrd_url = images_url + 'netboot/ubuntu-installer/arm64/initrd.gz'
+        initrd_url = f'{images_url}netboot/ubuntu-installer/arm64/initrd.gz'
         initrd_hash = 'cab5cb3fcefca8408aa5aae57f24574bfce8bdb9'
         initrd_path = self.fetch_asset(initrd_url, asset_hash=initrd_hash)
 
@@ -364,19 +364,20 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=machine:virt
         :avocado: tags=accel:tcg
         """
-        kernel_url = ('https://archives.fedoraproject.org/pub/archive/fedora'
-                      '/linux/releases/29/Everything/armhfp/os/images/pxeboot'
-                      '/vmlinuz')
         kernel_hash = 'e9826d741b4fb04cadba8d4824d1ed3b7fb8b4d4'
+        kernel_url = (
+            'https://archives.fedoraproject.org/pub/archive/fedora'
+            '/linux/releases/29/Everything/armhfp/os/images/pxeboot'
+            '/vmlinuz'
+        )
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyAMA0')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyAMA0'
         self.vm.add_args('-kernel', kernel_path,
                          '-append', kernel_command_line)
         self.vm.launch()
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.wait_for_console_pattern(console_pattern)
 
     def test_arm_emcraft_sf2(self):
@@ -404,10 +405,15 @@ class BootLinuxConsole(LinuxKernelTest):
 
         self.vm.set_console()
         kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE
-        self.vm.add_args('-kernel', uboot_path,
-                         '-append', kernel_command_line,
-                         '-drive', 'file=' + spi_path + ',if=mtd,format=raw',
-                         '-no-reboot')
+        self.vm.add_args(
+            '-kernel',
+            uboot_path,
+            '-append',
+            kernel_command_line,
+            '-drive',
+            f'file={spi_path},if=mtd,format=raw',
+            '-no-reboot',
+        )
         self.vm.launch()
         self.wait_for_console_pattern('Enter \'help\' for a list')
 
@@ -445,7 +451,7 @@ class BootLinuxConsole(LinuxKernelTest):
                          '-append', kernel_command_line,
                          '-device', 'usb-kbd')
         self.vm.launch()
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.wait_for_console_pattern(console_pattern)
         console_pattern = 'Product: QEMU USB Keyboard'
         self.wait_for_console_pattern(console_pattern)
@@ -464,10 +470,12 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=arch:arm
         :avocado: tags=machine:raspi2b
         """
-        deb_url = ('http://archive.raspberrypi.org/debian/'
-                   'pool/main/r/raspberrypi-firmware/'
-                   'raspberrypi-kernel_1.20190215-1_armhf.deb')
         deb_hash = 'cd284220b32128c5084037553db3c482426f3972'
+        deb_url = (
+            'http://archive.raspberrypi.org/debian/'
+            'pool/main/r/raspberrypi-firmware/'
+            'raspberrypi-kernel_1.20190215-1_armhf.deb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path, '/boot/kernel7.img')
         dtb_path = self.extract_from_deb(deb_path, '/boot/bcm2709-rpi-2-b.dtb')
@@ -481,10 +489,7 @@ class BootLinuxConsole(LinuxKernelTest):
         archive.gzip_uncompress(initrd_path_gz, initrd_path)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'earlycon=pl011,0x3f201000 console=ttyAMA0 '
-                               'panic=-1 noreboot ' +
-                               'dwc_otg.fiq_fsm_enable=0')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}earlycon=pl011,0x3f201000 console=ttyAMA0 panic=-1 noreboot dwc_otg.fiq_fsm_enable=0'
         self.vm.add_args('-kernel', kernel_path,
                          '-dtb', dtb_path,
                          '-initrd', initrd_path,
@@ -507,10 +512,12 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=machine:smdkc210
         :avocado: tags=accel:tcg
         """
-        deb_url = ('https://snapshot.debian.org/archive/debian/'
-                   '20190928T224601Z/pool/main/l/linux/'
-                   'linux-image-4.19.0-6-armmp_4.19.67-2+deb10u1_armhf.deb')
         deb_hash = 'fa9df4a0d38936cb50084838f2cb933f570d7d82'
+        deb_url = (
+            'https://snapshot.debian.org/archive/debian/'
+            '20190928T224601Z/pool/main/l/linux/'
+            'linux-image-4.19.0-6-armmp_4.19.67-2+deb10u1_armhf.deb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinuz-4.19.0-6-armmp')
@@ -526,11 +533,7 @@ class BootLinuxConsole(LinuxKernelTest):
         archive.gzip_uncompress(initrd_path_gz, initrd_path)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'earlycon=exynos4210,0x13800000 earlyprintk ' +
-                               'console=ttySAC0,115200n8 ' +
-                               'random.trust_cpu=off cryptomgr.notests ' +
-                               'cpuidle.off=1 panic=-1 noreboot')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}earlycon=exynos4210,0x13800000 earlyprintk console=ttySAC0,115200n8 random.trust_cpu=off cryptomgr.notests cpuidle.off=1 panic=-1 noreboot'
 
         self.vm.add_args('-kernel', kernel_path,
                          '-dtb', dtb_path,
@@ -548,9 +551,11 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=machine:cubieboard
         :avocado: tags=accel:tcg
         """
-        deb_url = ('https://apt.armbian.com/pool/main/l/'
-                   'linux-5.10.16-sunxi/linux-image-current-sunxi_21.02.2_armhf.deb')
         deb_hash = '9fa84beda245cabf0b4fa84cf6eaa7738ead1da0'
+        deb_url = (
+            'https://apt.armbian.com/pool/main/l/'
+            'linux-5.10.16-sunxi/linux-image-current-sunxi_21.02.2_armhf.deb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinuz-5.10.16-sunxi')
@@ -565,10 +570,7 @@ class BootLinuxConsole(LinuxKernelTest):
         archive.gzip_uncompress(initrd_path_gz, initrd_path)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0,115200 '
-                               'usbcore.nousb '
-                               'panic=-1 noreboot')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0,115200 usbcore.nousb panic=-1 noreboot'
         self.vm.add_args('-kernel', kernel_path,
                          '-dtb', dtb_path,
                          '-initrd', initrd_path,
@@ -592,9 +594,11 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=machine:cubieboard
         :avocado: tags=accel:tcg
         """
-        deb_url = ('https://apt.armbian.com/pool/main/l/'
-                   'linux-5.10.16-sunxi/linux-image-current-sunxi_21.02.2_armhf.deb')
         deb_hash = '9fa84beda245cabf0b4fa84cf6eaa7738ead1da0'
+        deb_url = (
+            'https://apt.armbian.com/pool/main/l/'
+            'linux-5.10.16-sunxi/linux-image-current-sunxi_21.02.2_armhf.deb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinuz-5.10.16-sunxi')
@@ -609,18 +613,20 @@ class BootLinuxConsole(LinuxKernelTest):
         archive.gzip_uncompress(rootfs_path_gz, rootfs_path)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0,115200 '
-                               'usbcore.nousb '
-                               'root=/dev/sda ro '
-                               'panic=-1 noreboot')
-        self.vm.add_args('-kernel', kernel_path,
-                         '-dtb', dtb_path,
-                         '-drive', 'if=none,format=raw,id=disk0,file='
-                                   + rootfs_path,
-                         '-device', 'ide-hd,bus=ide.0,drive=disk0',
-                         '-append', kernel_command_line,
-                         '-no-reboot')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0,115200 usbcore.nousb root=/dev/sda ro panic=-1 noreboot'
+        self.vm.add_args(
+            '-kernel',
+            kernel_path,
+            '-dtb',
+            dtb_path,
+            '-drive',
+            f'if=none,format=raw,id=disk0,file={rootfs_path}',
+            '-device',
+            'ide-hd,bus=ide.0,drive=disk0',
+            '-append',
+            kernel_command_line,
+            '-no-reboot',
+        )
         self.vm.launch()
         self.wait_for_console_pattern('Boot successful.')
 
@@ -641,34 +647,39 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=device:sd
         """
 
-        # This test download a 7.5 MiB compressed image and expand it
-        # to 126 MiB.
-        image_url = ('https://downloads.openwrt.org/releases/22.03.2/targets/'
-                     'sunxi/cortexa8/openwrt-22.03.2-sunxi-cortexa8-'
-                     'cubietech_a10-cubieboard-ext4-sdcard.img.gz')
         image_hash = ('94b5ecbfbc0b3b56276e5146b899eafa'
                       '2ac5dc2d08733d6705af9f144f39f554')
+        image_url = (
+            'https://downloads.openwrt.org/releases/22.03.2/targets/'
+            'sunxi/cortexa8/openwrt-22.03.2-sunxi-cortexa8-'
+            'cubietech_a10-cubieboard-ext4-sdcard.img.gz'
+        )
         image_path_gz = self.fetch_asset(image_url, asset_hash=image_hash,
                                          algorithm='sha256')
         image_path = archive.extract(image_path_gz, self.workdir)
         image_pow2ceil_expand(image_path)
 
         self.vm.set_console()
-        self.vm.add_args('-drive', 'file=' + image_path + ',if=sd,format=raw',
-                         '-nic', 'user',
-                         '-no-reboot')
+        self.vm.add_args(
+            '-drive',
+            f'file={image_path},if=sd,format=raw',
+            '-nic',
+            'user',
+            '-no-reboot',
+        )
         self.vm.launch()
 
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'usbcore.nousb '
-                               'noreboot')
+        kernel_command_line = (
+            f'{self.KERNEL_COMMON_COMMAND_LINE}usbcore.nousb noreboot'
+        )
 
         self.wait_for_console_pattern('U-Boot SPL')
 
         interrupt_interactive_console_until_pattern(
                 self, 'Hit any key to stop autoboot:', '=>')
-        exec_command_and_wait_for_pattern(self, "setenv extraargs '" +
-                                                kernel_command_line + "'", '=>')
+        exec_command_and_wait_for_pattern(
+            self, f"setenv extraargs '{kernel_command_line}'", '=>'
+        )
         exec_command_and_wait_for_pattern(self, 'boot', 'Starting kernel ...');
 
         self.wait_for_console_pattern(
@@ -701,7 +712,7 @@ class BootLinuxConsole(LinuxKernelTest):
         archive.gzip_uncompress(image_path_gz, image_path)
 
         self.vm.set_console()
-        drive_args = 'file=' + image_path + ',if=mtd,bus=0,unit=0'
+        drive_args = f'file={image_path},if=mtd,bus=0,unit=0'
         self.vm.add_args('-drive', drive_args)
         self.vm.launch()
 
@@ -738,10 +749,11 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=machine:quanta-gsj
         :avocado: tags=accel:tcg
         """
-        initrd_url = (
-                'https://github.com/hskinnemoen/openbmc/releases/download/'
-                '20200711-gsj-qemu-0/obmc-phosphor-initramfs-gsj.cpio.xz')
         initrd_hash = '98fefe5d7e56727b1eb17d5c00311b1b5c945300'
+        initrd_url = (
+            'https://github.com/hskinnemoen/openbmc/releases/download/'
+            '20200711-gsj-qemu-0/obmc-phosphor-initramfs-gsj.cpio.xz'
+        )
         initrd_path = self.fetch_asset(initrd_url, asset_hash=initrd_hash)
         kernel_url = (
                 'https://github.com/hskinnemoen/openbmc/releases/download/'
@@ -755,9 +767,7 @@ class BootLinuxConsole(LinuxKernelTest):
         dtb_path = self.fetch_asset(dtb_url, asset_hash=dtb_hash)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0,115200n8 '
-                               'earlycon=uart8250,mmio32,0xf0001000')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0,115200n8 earlycon=uart8250,mmio32,0xf0001000'
         self.vm.add_args('-kernel', kernel_path,
                          '-initrd', initrd_path,
                          '-dtb', dtb_path,
@@ -775,9 +785,11 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=machine:bpim2u
         :avocado: tags=accel:tcg
         """
-        deb_url = ('https://apt.armbian.com/pool/main/l/linux-5.10.16-sunxi/'
-                   'linux-image-current-sunxi_21.02.2_armhf.deb')
         deb_hash = '9fa84beda245cabf0b4fa84cf6eaa7738ead1da0'
+        deb_url = (
+            'https://apt.armbian.com/pool/main/l/linux-5.10.16-sunxi/'
+            'linux-image-current-sunxi_21.02.2_armhf.deb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinuz-5.10.16-sunxi')
@@ -786,14 +798,12 @@ class BootLinuxConsole(LinuxKernelTest):
         dtb_path = self.extract_from_deb(deb_path, dtb_path)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0,115200n8 '
-                               'earlycon=uart,mmio32,0x1c28000')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0,115200n8 earlycon=uart,mmio32,0x1c28000'
         self.vm.add_args('-kernel', kernel_path,
                          '-dtb', dtb_path,
                          '-append', kernel_command_line)
         self.vm.launch()
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.wait_for_console_pattern(console_pattern)
 
     def test_arm_bpim2u_initrd(self):
@@ -802,9 +812,11 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=accel:tcg
         :avocado: tags=machine:bpim2u
         """
-        deb_url = ('https://apt.armbian.com/pool/main/l/linux-5.10.16-sunxi/'
-                   'linux-image-current-sunxi_21.02.2_armhf.deb')
         deb_hash = '9fa84beda245cabf0b4fa84cf6eaa7738ead1da0'
+        deb_url = (
+            'https://apt.armbian.com/pool/main/l/linux-5.10.16-sunxi/'
+            'linux-image-current-sunxi_21.02.2_armhf.deb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinuz-5.10.16-sunxi')
@@ -820,9 +832,7 @@ class BootLinuxConsole(LinuxKernelTest):
         archive.gzip_uncompress(initrd_path_gz, initrd_path)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0,115200 '
-                               'panic=-1 noreboot')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0,115200 panic=-1 noreboot'
         self.vm.add_args('-kernel', kernel_path,
                          '-dtb', dtb_path,
                          '-initrd', initrd_path,
@@ -849,9 +859,11 @@ class BootLinuxConsole(LinuxKernelTest):
         """
         self.require_netdev('user')
 
-        deb_url = ('https://apt.armbian.com/pool/main/l/linux-5.10.16-sunxi/'
-                   'linux-image-current-sunxi_21.02.2_armhf.deb')
         deb_hash = '9fa84beda245cabf0b4fa84cf6eaa7738ead1da0'
+        deb_url = (
+            'https://apt.armbian.com/pool/main/l/linux-5.10.16-sunxi/'
+            'linux-image-current-sunxi_21.02.2_armhf.deb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinuz-5.10.16-sunxi')
@@ -867,17 +879,22 @@ class BootLinuxConsole(LinuxKernelTest):
         image_pow2ceil_expand(rootfs_path)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0,115200 '
-                               'root=/dev/mmcblk0 rootwait rw '
-                               'panic=-1 noreboot')
-        self.vm.add_args('-kernel', kernel_path,
-                         '-dtb', dtb_path,
-                         '-drive', 'file=' + rootfs_path + ',if=sd,format=raw',
-                         '-net', 'nic,model=gmac,netdev=host_gmac',
-                         '-netdev', 'user,id=host_gmac',
-                         '-append', kernel_command_line,
-                         '-no-reboot')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0,115200 root=/dev/mmcblk0 rootwait rw panic=-1 noreboot'
+        self.vm.add_args(
+            '-kernel',
+            kernel_path,
+            '-dtb',
+            dtb_path,
+            '-drive',
+            f'file={rootfs_path},if=sd,format=raw',
+            '-net',
+            'nic,model=gmac,netdev=host_gmac',
+            '-netdev',
+            'user,id=host_gmac',
+            '-append',
+            kernel_command_line,
+            '-no-reboot',
+        )
         self.vm.launch()
         shell_ready = "/bin/sh: can't access tty; job control turned off"
         self.wait_for_console_pattern(shell_ready)
@@ -905,34 +922,39 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=device:sd
         """
 
-        # This test download a 8.9 MiB compressed image and expand it
-        # to 127 MiB.
-        image_url = ('https://downloads.openwrt.org/releases/22.03.3/targets/'
-                     'sunxi/cortexa7/openwrt-22.03.3-sunxi-cortexa7-'
-                     'sinovoip_bananapi-m2-ultra-ext4-sdcard.img.gz')
         image_hash = ('5b41b4e11423e562c6011640f9a7cd3b'
                       'dd0a3d42b83430f7caa70a432e6cd82c')
+        image_url = (
+            'https://downloads.openwrt.org/releases/22.03.3/targets/'
+            'sunxi/cortexa7/openwrt-22.03.3-sunxi-cortexa7-'
+            'sinovoip_bananapi-m2-ultra-ext4-sdcard.img.gz'
+        )
         image_path_gz = self.fetch_asset(image_url, asset_hash=image_hash,
                                          algorithm='sha256')
         image_path = archive.extract(image_path_gz, self.workdir)
         image_pow2ceil_expand(image_path)
 
         self.vm.set_console()
-        self.vm.add_args('-drive', 'file=' + image_path + ',if=sd,format=raw',
-                         '-nic', 'user',
-                         '-no-reboot')
+        self.vm.add_args(
+            '-drive',
+            f'file={image_path},if=sd,format=raw',
+            '-nic',
+            'user',
+            '-no-reboot',
+        )
         self.vm.launch()
 
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'usbcore.nousb '
-                               'noreboot')
+        kernel_command_line = (
+            f'{self.KERNEL_COMMON_COMMAND_LINE}usbcore.nousb noreboot'
+        )
 
         self.wait_for_console_pattern('U-Boot SPL')
 
         interrupt_interactive_console_until_pattern(
                 self, 'Hit any key to stop autoboot:', '=>')
-        exec_command_and_wait_for_pattern(self, "setenv extraargs '" +
-                                                kernel_command_line + "'", '=>')
+        exec_command_and_wait_for_pattern(
+            self, f"setenv extraargs '{kernel_command_line}'", '=>'
+        )
         exec_command_and_wait_for_pattern(self, 'boot', 'Starting kernel ...');
 
         self.wait_for_console_pattern(
@@ -951,9 +973,11 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=machine:orangepi-pc
         :avocado: tags=accel:tcg
         """
-        deb_url = ('https://apt.armbian.com/pool/main/l/'
-                   'linux-5.10.16-sunxi/linux-image-current-sunxi_21.02.2_armhf.deb')
         deb_hash = '9fa84beda245cabf0b4fa84cf6eaa7738ead1da0'
+        deb_url = (
+            'https://apt.armbian.com/pool/main/l/'
+            'linux-5.10.16-sunxi/linux-image-current-sunxi_21.02.2_armhf.deb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinuz-5.10.16-sunxi')
@@ -961,14 +985,12 @@ class BootLinuxConsole(LinuxKernelTest):
         dtb_path = self.extract_from_deb(deb_path, dtb_path)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0,115200n8 '
-                               'earlycon=uart,mmio32,0x1c28000')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0,115200n8 earlycon=uart,mmio32,0x1c28000'
         self.vm.add_args('-kernel', kernel_path,
                          '-dtb', dtb_path,
                          '-append', kernel_command_line)
         self.vm.launch()
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.wait_for_console_pattern(console_pattern)
 
     def test_arm_orangepi_initrd(self):
@@ -977,9 +999,11 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=accel:tcg
         :avocado: tags=machine:orangepi-pc
         """
-        deb_url = ('https://apt.armbian.com/pool/main/l/'
-                   'linux-5.10.16-sunxi/linux-image-current-sunxi_21.02.2_armhf.deb')
         deb_hash = '9fa84beda245cabf0b4fa84cf6eaa7738ead1da0'
+        deb_url = (
+            'https://apt.armbian.com/pool/main/l/'
+            'linux-5.10.16-sunxi/linux-image-current-sunxi_21.02.2_armhf.deb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinuz-5.10.16-sunxi')
@@ -994,9 +1018,7 @@ class BootLinuxConsole(LinuxKernelTest):
         archive.gzip_uncompress(initrd_path_gz, initrd_path)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0,115200 '
-                               'panic=-1 noreboot')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0,115200 panic=-1 noreboot'
         self.vm.add_args('-kernel', kernel_path,
                          '-dtb', dtb_path,
                          '-initrd', initrd_path,
@@ -1023,9 +1045,11 @@ class BootLinuxConsole(LinuxKernelTest):
         """
         self.require_netdev('user')
 
-        deb_url = ('https://apt.armbian.com/pool/main/l/'
-                   'linux-5.10.16-sunxi/linux-image-current-sunxi_21.02.2_armhf.deb')
         deb_hash = '9fa84beda245cabf0b4fa84cf6eaa7738ead1da0'
+        deb_url = (
+            'https://apt.armbian.com/pool/main/l/'
+            'linux-5.10.16-sunxi/linux-image-current-sunxi_21.02.2_armhf.deb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinuz-5.10.16-sunxi')
@@ -1040,15 +1064,18 @@ class BootLinuxConsole(LinuxKernelTest):
         image_pow2ceil_expand(rootfs_path)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0,115200 '
-                               'root=/dev/mmcblk0 rootwait rw '
-                               'panic=-1 noreboot')
-        self.vm.add_args('-kernel', kernel_path,
-                         '-dtb', dtb_path,
-                         '-drive', 'file=' + rootfs_path + ',if=sd,format=raw',
-                         '-append', kernel_command_line,
-                         '-no-reboot')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0,115200 root=/dev/mmcblk0 rootwait rw panic=-1 noreboot'
+        self.vm.add_args(
+            '-kernel',
+            kernel_path,
+            '-dtb',
+            dtb_path,
+            '-drive',
+            f'file={rootfs_path},if=sd,format=raw',
+            '-append',
+            kernel_command_line,
+            '-no-reboot',
+        )
         self.vm.launch()
         shell_ready = "/bin/sh: can't access tty; job control turned off"
         self.wait_for_console_pattern(shell_ready)
@@ -1076,38 +1103,35 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=device:sd
         """
 
-        # This test download a 275 MiB compressed image and expand it
-        # to 1036 MiB, but the underlying filesystem is 1552 MiB...
-        # As we expand it to 2 GiB we are safe.
-
-        image_url = ('https://archive.armbian.com/orangepipc/archive/'
-                     'Armbian_20.08.1_Orangepipc_bionic_current_5.8.5.img.xz')
         image_hash = ('b4d6775f5673486329e45a0586bf06b6'
                       'dbe792199fd182ac6b9c7bb6c7d3e6dd')
+        image_url = (
+            'https://archive.armbian.com/orangepipc/archive/'
+            'Armbian_20.08.1_Orangepipc_bionic_current_5.8.5.img.xz'
+        )
         image_path_xz = self.fetch_asset(image_url, asset_hash=image_hash,
                                          algorithm='sha256')
         image_path = archive.extract(image_path_xz, self.workdir)
         image_pow2ceil_expand(image_path)
 
         self.vm.set_console()
-        self.vm.add_args('-drive', 'file=' + image_path + ',if=sd,format=raw',
-                         '-nic', 'user',
-                         '-no-reboot')
+        self.vm.add_args(
+            '-drive',
+            f'file={image_path},if=sd,format=raw',
+            '-nic',
+            'user',
+            '-no-reboot',
+        )
         self.vm.launch()
 
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0,115200 '
-                               'loglevel=7 '
-                               'nosmp '
-                               'systemd.default_timeout_start_sec=9000 '
-                               'systemd.mask=armbian-zram-config.service '
-                               'systemd.mask=armbian-ramlog.service')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0,115200 loglevel=7 nosmp systemd.default_timeout_start_sec=9000 systemd.mask=armbian-zram-config.service systemd.mask=armbian-ramlog.service'
 
         self.wait_for_console_pattern('U-Boot SPL')
         self.wait_for_console_pattern('Autoboot in ')
         exec_command_and_wait_for_pattern(self, ' ', '=>')
-        exec_command_and_wait_for_pattern(self, "setenv extraargs '" +
-                                                kernel_command_line + "'", '=>')
+        exec_command_and_wait_for_pattern(
+            self, f"setenv extraargs '{kernel_command_line}'", '=>'
+        )
         exec_command_and_wait_for_pattern(self, 'boot', 'Starting kernel ...');
 
         self.wait_for_console_pattern('systemd[1]: Set hostname ' +
@@ -1141,7 +1165,7 @@ class BootLinuxConsole(LinuxKernelTest):
         image_path = os.path.join(self.workdir, 'armv7.img')
         archive.gzip_uncompress(image_path_gz, image_path)
         image_pow2ceil_expand(image_path)
-        image_drive_args = 'if=sd,format=raw,snapshot=on,file=' + image_path
+        image_drive_args = f'if=sd,format=raw,snapshot=on,file={image_path}'
 
         # dd if=u-boot-sunxi-with-spl.bin of=armv7.img bs=1K seek=8 conv=notrunc
         with open(uboot_path, 'rb') as f_in:
@@ -1198,8 +1222,9 @@ class BootLinuxConsole(LinuxKernelTest):
         efi_fd = os.path.join(self.workdir, 'RPI_EFI.fd')
 
         self.vm.set_console(console_index=1)
-        self.vm.add_args('-nodefaults',
-                         '-device', 'loader,file=%s,force-raw=true' % efi_fd)
+        self.vm.add_args(
+            '-nodefaults', '-device', f'loader,file={efi_fd},force-raw=true'
+        )
         self.vm.launch()
         self.wait_for_console_pattern('version UEFI Firmware v1.15')
 
@@ -1215,12 +1240,12 @@ class BootLinuxConsole(LinuxKernelTest):
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
         self.vm.set_console()
-        kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'console=sclp0'
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=sclp0'
         self.vm.add_args('-nodefaults',
                          '-kernel', kernel_path,
                          '-append', kernel_command_line)
         self.vm.launch()
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.wait_for_console_pattern(console_pattern)
 
     def test_alpha_clipper(self):
@@ -1236,12 +1261,12 @@ class BootLinuxConsole(LinuxKernelTest):
         uncompressed_kernel = archive.uncompress(kernel_path, self.workdir)
 
         self.vm.set_console()
-        kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'console=ttyS0'
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0'
         self.vm.add_args('-nodefaults',
                          '-kernel', uncompressed_kernel,
                          '-append', kernel_command_line)
         self.vm.launch()
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.wait_for_console_pattern(console_pattern)
 
     def test_m68k_q800(self):
@@ -1249,21 +1274,22 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=arch:m68k
         :avocado: tags=machine:q800
         """
-        deb_url = ('https://snapshot.debian.org/archive/debian-ports'
-                   '/20191021T083923Z/pool-m68k/main'
-                   '/l/linux/kernel-image-5.3.0-1-m68k-di_5.3.7-1_m68k.udeb')
         deb_hash = '044954bb9be4160a3ce81f8bc1b5e856b75cccd1'
+        deb_url = (
+            'https://snapshot.debian.org/archive/debian-ports'
+            '/20191021T083923Z/pool-m68k/main'
+            '/l/linux/kernel-image-5.3.0-1-m68k-di_5.3.7-1_m68k.udeb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinux-5.3.0-1-m68k')
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0 vga=off')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0 vga=off'
         self.vm.add_args('-kernel', kernel_path,
                          '-append', kernel_command_line)
         self.vm.launch()
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.wait_for_console_pattern(console_pattern)
         console_pattern = 'No filesystem could mount root'
         self.wait_for_console_pattern(console_pattern)
@@ -1274,8 +1300,7 @@ class BootLinuxConsole(LinuxKernelTest):
         file_path = self.fetch_asset(tar_url, asset_hash=tar_hash)
         archive.extract(file_path, self.workdir)
         self.vm.set_console(console_index=console)
-        self.vm.add_args('-kernel',
-                         self.workdir + '/day' + day + '/' + kernel_name)
+        self.vm.add_args('-kernel', f'{self.workdir}/day{day}/{kernel_name}')
         self.vm.launch()
         self.wait_for_console_pattern('QEMU advent calendar')
 
@@ -1285,7 +1310,7 @@ class BootLinuxConsole(LinuxKernelTest):
         :avocado: tags=machine:vexpress-a9
         """
         tar_hash = '32b7677ce8b6f1471fb0059865f451169934245b'
-        self.vm.add_args('-dtb', self.workdir + '/day16/vexpress-v2p-ca9.dtb')
+        self.vm.add_args('-dtb', f'{self.workdir}/day16/vexpress-v2p-ca9.dtb')
         self.do_test_advcal_2018('16', tar_hash, 'winter.zImage')
 
     def test_arm_ast2600_debian(self):
@@ -1352,7 +1377,7 @@ class BootLinuxConsole(LinuxKernelTest):
         self.require_accelerator("tcg")
         images_url = ('https://github.com/open-power/op-build/releases/download/v2.7/')
 
-        kernel_url = images_url + 'zImage.epapr'
+        kernel_url = f'{images_url}zImage.epapr'
         kernel_hash = '0ab237df661727e5392cee97460e8674057a883c5f74381a128fa772588d45cd'
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash,
                                        algorithm='sha256')
@@ -1365,7 +1390,7 @@ class BootLinuxConsole(LinuxKernelTest):
                          '-device', 'nec-usb-xhci,bus=bridge1,addr=0x2')
         self.vm.launch()
 
-        self.wait_for_console_pattern("CPU: " + proc + " generation processor")
+        self.wait_for_console_pattern(f"CPU: {proc} generation processor")
         self.wait_for_console_pattern("zImage starting: loaded")
         self.wait_for_console_pattern("Run /init as init process")
         self.wait_for_console_pattern("Creating 1 MTD partitions")

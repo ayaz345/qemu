@@ -126,10 +126,10 @@ def pick_default_qemu_bin(bin_prefix='qemu-system-', arch=None):
         os.path.join(BUILD_DIR, qemu_bin_name),
         os.path.join(BUILD_DIR, "build", qemu_bin_name),
     ]
-    for path in qemu_bin_paths:
-        if is_readable_executable_file(path):
-            return path
-    return None
+    return next(
+        (path for path in qemu_bin_paths if is_readable_executable_file(path)),
+        None,
+    )
 
 
 def _console_interaction(test, success_message, failure_message,
@@ -155,8 +155,7 @@ def _console_interaction(test, success_message, failure_message,
             break
         if failure_message and failure_message in msg:
             console.close()
-            fail = 'Failure message found in console: "%s". Expected: "%s"' % \
-                    (failure_message, success_message)
+            fail = f'Failure message found in console: "{failure_message}". Expected: "{success_message}"'
             test.fail(fail)
 
 def interrupt_interactive_console_until_pattern(test, success_message,
@@ -236,9 +235,7 @@ class QemuBaseTest(avocado.Test):
         Gets a tag value, if unique for a key
         """
         vals = self.tags.get(tag_name, [])
-        if len(vals) == 1:
-            return vals.pop()
-        return None
+        return vals.pop() if len(vals) == 1 else None
 
     def setUp(self, bin_prefix):
         self.arch = self.params.get('arch',
@@ -274,8 +271,7 @@ class QemuSystemTest(QemuBaseTest):
 
         super().setUp('qemu-system-')
 
-        accel_required = self._get_unique_tag_val('accel')
-        if accel_required:
+        if accel_required := self._get_unique_tag_val('accel'):
             self.require_accelerator(accel_required)
 
         self.machine = self.params.get('machine',
@@ -397,10 +393,9 @@ class QemuUserTest(QemuBaseTest):
         self._ldpath.append(os.path.abspath(ldpath))
 
     def run(self, bin_path, args=[]):
-        qemu_args = " ".join(["-L %s" % ldpath for ldpath in self._ldpath])
+        qemu_args = " ".join([f"-L {ldpath}" for ldpath in self._ldpath])
         bin_args = " ".join(args)
-        return process.run("%s %s %s %s" % (self.qemu_bin, qemu_args,
-                                            bin_path, bin_args))
+        return process.run(f"{self.qemu_bin} {qemu_args} {bin_path} {bin_args}")
 
 
 class LinuxSSHMixIn:
@@ -450,7 +445,7 @@ class LinuxSSHMixIn:
             if exp in line:
                 break
         else:
-            self.fail('"%s" output does not contain "%s"' % (cmd, exp))
+            self.fail(f'"{cmd}" output does not contain "{exp}"')
 
 class LinuxDistro:
     """Represents a Linux distribution
@@ -578,15 +573,7 @@ class LinuxTest(LinuxSSHMixIn, QemuSystemTest):
 
         self.distro = LinuxDistro(distro_name, distro_version, self.arch)
 
-        # The distro checksum behaves differently than distro name and
-        # version. First, it does not respect a tag with the same
-        # name, given that it's not expected to be used for filtering
-        # (distro name versions are the natural choice).  Second, the
-        # order of precedence is: parameter, attribute and then value
-        # from KNOWN_DISTROS.
-        distro_checksum = self.params.get('distro_checksum',
-                                          default=None)
-        if distro_checksum:
+        if distro_checksum := self.params.get('distro_checksum', default=None):
             self.distro.checksum = distro_checksum
 
     def setUp(self, ssh_pubkey=None, network_device_type='virtio-net'):
@@ -596,8 +583,12 @@ class LinuxTest(LinuxSSHMixIn, QemuSystemTest):
         self.vm.add_args('-smp', self.smp)
         self.vm.add_args('-m', self.memory)
         # The following network device allows for SSH connections
-        self.vm.add_args('-netdev', 'user,id=vnet,hostfwd=:127.0.0.1:0-:22',
-                         '-device', '%s,netdev=vnet' % network_device_type)
+        self.vm.add_args(
+            '-netdev',
+            'user,id=vnet,hostfwd=:127.0.0.1:0-:22',
+            '-device',
+            f'{network_device_type},netdev=vnet',
+        )
         self.set_up_boot()
         if ssh_pubkey is None:
             ssh_pubkey, self.ssh_key = self.set_up_existing_ssh_keys()
@@ -658,13 +649,13 @@ class LinuxTest(LinuxSSHMixIn, QemuSystemTest):
 
     def set_up_boot(self):
         path = self.download_boot()
-        self.vm.add_args('-drive', 'file=%s' % path)
+        self.vm.add_args('-drive', f'file={path}')
 
     def set_up_cloudinit(self, ssh_pubkey=None):
         self.phone_server = cloudinit.PhoneHomeServer(('0.0.0.0', 0),
                                                       self.name)
         cloudinit_iso = self.prepare_cloudinit(ssh_pubkey)
-        self.vm.add_args('-drive', 'file=%s,format=raw' % cloudinit_iso)
+        self.vm.add_args('-drive', f'file={cloudinit_iso},format=raw')
 
     def launch_and_wait(self, set_up_ssh_connection=True):
         self.vm.set_console()

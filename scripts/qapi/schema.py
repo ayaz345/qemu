@@ -84,8 +84,7 @@ class QAPISchemaEntity:
         self._checked = True
 
     def connect_doc(self, doc=None):
-        doc = doc or self.doc
-        if doc:
+        if doc := doc or self.doc:
             for f in self.features:
                 doc.connect_feature(f)
 
@@ -115,7 +114,7 @@ class QAPISchemaEntity:
 
     def describe(self):
         assert self.meta
-        return "%s '%s'" % (self.meta, self.name)
+        return f"{self.meta} '{self.name}'"
 
 
 class QAPISchemaVisitor:
@@ -249,9 +248,7 @@ class QAPISchemaType(QAPISchemaEntity):
         return json2qtype.get(self.json_type())
 
     def doc_type(self):
-        if self.is_implicit():
-            return None
-        return self.name
+        return None if self.is_implicit() else self.name
 
     def need_has_if_optional(self):
         # When FOO is a pointer, has_FOO == !!FOO, i.e. has_FOO is redundant.
@@ -268,7 +265,7 @@ class QAPISchemaType(QAPISchemaEntity):
 
     def describe(self):
         assert self.meta
-        return "%s type '%s'" % (self.meta, self.name)
+        return f"{self.meta} type '{self.name}'"
 
 
 class QAPISchemaBuiltinType(QAPISchemaType):
@@ -290,7 +287,7 @@ class QAPISchemaBuiltinType(QAPISchemaType):
 
     def c_param_type(self):
         if self.name == 'str':
-            return 'const ' + self._c_type_name
+            return f'const {self._c_type_name}'
         return self._c_type_name
 
     def json_type(self):
@@ -388,9 +385,7 @@ class QAPISchemaArrayType(QAPISchemaType):
 
     def doc_type(self):
         elt_doc_type = self.element_type.doc_type()
-        if not elt_doc_type:
-            return None
-        return 'array of ' + elt_doc_type
+        return None if not elt_doc_type else f'array of {elt_doc_type}'
 
     def visit(self, visitor):
         super().visit(visitor)
@@ -399,7 +394,7 @@ class QAPISchemaArrayType(QAPISchemaType):
 
     def describe(self):
         assert self.meta
-        return "%s type ['%s']" % (self.meta, self._element_type_name)
+        return f"{self.meta} type ['{self._element_type_name}']"
 
 
 class QAPISchemaObjectType(QAPISchemaType):
@@ -431,8 +426,7 @@ class QAPISchemaObjectType(QAPISchemaType):
             return
         if self._checked:
             # Recursed: C struct contains itself
-            raise QAPISemError(self.info,
-                               "object %s contains itself" % self.name)
+            raise QAPISemError(self.info, f"object {self.name} contains itself")
 
         super().check(schema)
         assert self._checked and self.members is None
@@ -445,8 +439,8 @@ class QAPISchemaObjectType(QAPISchemaType):
                     or self.base.variants):
                 raise QAPISemError(
                     self.info,
-                    "'base' requires a struct type, %s isn't"
-                    % self.base.describe())
+                    f"'base' requires a struct type, {self.base.describe()} isn't",
+                )
             self.base.check(schema)
             self.base.check_clash(self.info, seen)
         for m in self.local_members:
@@ -542,9 +536,9 @@ class QAPISchemaAlternateType(QAPISchemaType):
             if not qtype:
                 raise QAPISemError(
                     self.info,
-                    "%s cannot use %s"
-                    % (v.describe(self.info), v.type.describe()))
-            conflicting = set([qtype])
+                    f"{v.describe(self.info)} cannot use {v.type.describe()}",
+                )
+            conflicting = {qtype}
             if qtype == 'QTYPE_QSTRING':
                 if isinstance(v.type, QAPISchemaEnumType):
                     for m in v.type.members:
@@ -560,8 +554,8 @@ class QAPISchemaAlternateType(QAPISchemaType):
                 if qt in types_seen:
                     raise QAPISemError(
                         self.info,
-                        "%s can't be distinguished from '%s'"
-                        % (v.describe(self.info), types_seen[qt]))
+                        f"{v.describe(self.info)} can't be distinguished from '{types_seen[qt]}'",
+                    )
                 types_seen[qt] = v.name
 
     def connect_doc(self, doc=None):
@@ -602,7 +596,7 @@ class QAPISchemaVariants:
             v.set_defined_in(name)
 
     def check(self, schema, seen):
-        if self._tag_name:      # union
+        if self._tag_name:  # union
             self.tag_member = seen.get(c_name(self._tag_name))
             base = "'base'"
             # Pointing to the base type when not implicit would be
@@ -610,28 +604,28 @@ class QAPISchemaVariants:
             if not self.tag_member or self._tag_name != self.tag_member.name:
                 raise QAPISemError(
                     self.info,
-                    "discriminator '%s' is not a member of %s"
-                    % (self._tag_name, base))
+                    f"discriminator '{self._tag_name}' is not a member of {base}",
+                )
             # Here we do:
             base_type = schema.lookup_type(self.tag_member.defined_in)
             assert base_type
             if not base_type.is_implicit():
-                base = "base type '%s'" % self.tag_member.defined_in
+                base = f"base type '{self.tag_member.defined_in}'"
             if not isinstance(self.tag_member.type, QAPISchemaEnumType):
                 raise QAPISemError(
                     self.info,
-                    "discriminator member '%s' of %s must be of enum type"
-                    % (self._tag_name, base))
+                    f"discriminator member '{self._tag_name}' of {base} must be of enum type",
+                )
             if self.tag_member.optional:
                 raise QAPISemError(
                     self.info,
-                    "discriminator member '%s' of %s must not be optional"
-                    % (self._tag_name, base))
+                    f"discriminator member '{self._tag_name}' of {base} must not be optional",
+                )
             if self.tag_member.ifcond.is_present():
                 raise QAPISemError(
                     self.info,
-                    "discriminator member '%s' of %s must not be conditional"
-                    % (self._tag_name, base))
+                    f"discriminator member '{self._tag_name}' of {base} must not be conditional",
+                )
         else:                   # alternate
             assert isinstance(self.tag_member.type, QAPISchemaEnumType)
             assert not self.tag_member.optional
@@ -655,13 +649,13 @@ class QAPISchemaVariants:
                 if v.name not in self.tag_member.type.member_names():
                     raise QAPISemError(
                         self.info,
-                        "branch '%s' is not a value of %s"
-                        % (v.name, self.tag_member.type.describe()))
+                        f"branch '{v.name}' is not a value of {self.tag_member.type.describe()}",
+                    )
                 if not isinstance(v.type, QAPISchemaObjectType):
                     raise QAPISemError(
                         self.info,
-                        "%s cannot use %s"
-                        % (v.describe(self.info), v.type.describe()))
+                        f"{v.describe(self.info)} cannot use {v.type.describe()}",
+                    )
                 v.type.check(schema)
 
     def check_clash(self, info, seen):
@@ -691,8 +685,8 @@ class QAPISchemaMember:
         if cname in seen:
             raise QAPISemError(
                 info,
-                "%s collides with %s"
-                % (self.describe(info), seen[cname].describe(info)))
+                f"{self.describe(info)} collides with {seen[cname].describe(info)}",
+            )
         seen[cname] = self
 
     def connect_doc(self, doc):
@@ -717,14 +711,14 @@ class QAPISchemaMember:
                 defined_in = defined_in[:-4]
             elif defined_in.endswith('-base'):
                 # Implicit type created for a union's dict 'base'
-                role = 'base ' + role
+                role = f'base {role}'
                 defined_in = defined_in[:-5]
             else:
                 assert False
 
         if defined_in != info.defn_name:
-            return "%s '%s' of %s '%s'" % (role, self.name, meta, defined_in)
-        return "%s '%s'" % (role, self.name)
+            return f"{role} '{self.name}' of {meta} '{defined_in}'"
+        return f"{role} '{self.name}'"
 
 
 class QAPISchemaEnumMember(QAPISchemaMember):
@@ -819,13 +813,13 @@ class QAPISchemaCommand(QAPISchemaEntity):
             if not isinstance(self.arg_type, QAPISchemaObjectType):
                 raise QAPISemError(
                     self.info,
-                    "command's 'data' cannot take %s"
-                    % self.arg_type.describe())
+                    f"command's 'data' cannot take {self.arg_type.describe()}",
+                )
             if self.arg_type.variants and not self.boxed:
                 raise QAPISemError(
                     self.info,
-                    "command's 'data' can take %s only with 'boxed': true"
-                    % self.arg_type.describe())
+                    f"command's 'data' can take {self.arg_type.describe()} only with 'boxed': true",
+                )
             self.arg_type.check(schema)
             if self.arg_type.has_conditional_members() and not self.boxed:
                 raise QAPISemError(
@@ -842,13 +836,12 @@ class QAPISchemaCommand(QAPISchemaEntity):
                 if not isinstance(typ, QAPISchemaObjectType):
                     raise QAPISemError(
                         self.info,
-                        "command's 'returns' cannot take %s"
-                        % self.ret_type.describe())
+                        f"command's 'returns' cannot take {self.ret_type.describe()}",
+                    )
 
     def connect_doc(self, doc=None):
         super().connect_doc(doc)
-        doc = doc or self.doc
-        if doc:
+        if doc := doc or self.doc:
             if self.arg_type and self.arg_type.is_implicit():
                 self.arg_type.connect_doc(doc)
 
@@ -879,13 +872,13 @@ class QAPISchemaEvent(QAPISchemaEntity):
             if not isinstance(self.arg_type, QAPISchemaObjectType):
                 raise QAPISemError(
                     self.info,
-                    "event's 'data' cannot take %s"
-                    % self.arg_type.describe())
+                    f"event's 'data' cannot take {self.arg_type.describe()}",
+                )
             if self.arg_type.variants and not self.boxed:
                 raise QAPISemError(
                     self.info,
-                    "event's 'data' can take %s only with 'boxed': true"
-                    % self.arg_type.describe())
+                    f"event's 'data' can take {self.arg_type.describe()} only with 'boxed': true",
+                )
             self.arg_type.check(schema)
             if self.arg_type.has_conditional_members() and not self.boxed:
                 raise QAPISemError(
@@ -894,8 +887,7 @@ class QAPISchemaEvent(QAPISchemaEntity):
 
     def connect_doc(self, doc=None):
         super().connect_doc(doc)
-        doc = doc or self.doc
-        if doc:
+        if doc := doc or self.doc:
             if self.arg_type and self.arg_type.is_implicit():
                 self.arg_type.connect_doc(doc)
 
@@ -937,24 +929,18 @@ class QAPISchema:
         self._entity_list.append(ent)
         if ent.name is None:
             return
-        # TODO reject names that differ only in '_' vs. '.'  vs. '-',
-        # because they're liable to clash in generated C.
-        other_ent = self._entity_dict.get(ent.name)
-        if other_ent:
+        if other_ent := self._entity_dict.get(ent.name):
             if other_ent.info:
                 where = QAPISourceError(other_ent.info, "previous definition")
                 raise QAPISemError(
                     ent.info,
                     "'%s' is already defined\n%s" % (ent.name, where))
-            raise QAPISemError(
-                ent.info, "%s is already defined" % other_ent.describe())
+            raise QAPISemError(ent.info, f"{other_ent.describe()} is already defined")
         self._entity_dict[ent.name] = ent
 
     def lookup_entity(self, name, typ=None):
         ent = self._entity_dict.get(name)
-        if typ and not isinstance(ent, typ):
-            return None
-        return ent
+        return None if typ and not isinstance(ent, typ) else ent
 
     def lookup_type(self, name):
         return self.lookup_entity(name, QAPISchemaType)
@@ -964,8 +950,7 @@ class QAPISchema:
         if not typ:
             if callable(what):
                 what = what(info)
-            raise QAPISemError(
-                info, "%s uses unknown type '%s'" % (what, name))
+            raise QAPISemError(info, f"{what} uses unknown type '{name}'")
         return typ
 
     def _module_name(self, fname: str) -> str:
@@ -998,21 +983,7 @@ class QAPISchema:
         self._make_array_type(name, None)
 
     def _def_predefineds(self):
-        for t in [('str',    'string',  'char' + POINTER_SUFFIX),
-                  ('number', 'number',  'double'),
-                  ('int',    'int',     'int64_t'),
-                  ('int8',   'int',     'int8_t'),
-                  ('int16',  'int',     'int16_t'),
-                  ('int32',  'int',     'int32_t'),
-                  ('int64',  'int',     'int64_t'),
-                  ('uint8',  'int',     'uint8_t'),
-                  ('uint16', 'int',     'uint16_t'),
-                  ('uint32', 'int',     'uint32_t'),
-                  ('uint64', 'int',     'uint64_t'),
-                  ('size',   'int',     'uint64_t'),
-                  ('bool',   'boolean', 'bool'),
-                  ('any',    'value',   'QObject' + POINTER_SUFFIX),
-                  ('null',   'null',    'QNull' + POINTER_SUFFIX)]:
+        for t in [('str', 'string', f'char{POINTER_SUFFIX}'), ('number', 'number',  'double'), ('int',    'int',     'int64_t'), ('int8',   'int',     'int8_t'), ('int16',  'int',     'int16_t'), ('int32',  'int',     'int32_t'), ('int64',  'int',     'int64_t'), ('uint8',  'int',     'uint8_t'), ('uint16', 'int',     'uint16_t'), ('uint32', 'int',     'uint32_t'), ('uint64', 'int',     'uint64_t'), ('size',   'int',     'uint64_t'), ('bool',   'boolean', 'bool'), ('any', 'value', f'QObject{POINTER_SUFFIX}'), ('null', 'null', f'QNull{POINTER_SUFFIX}')]:
             self._def_builtin_type(*t)
         self.the_empty_object_type = QAPISchemaObjectType(
             'q_empty', None, None, None, None, None, [], None)
@@ -1044,7 +1015,7 @@ class QAPISchema:
                 for v in values]
 
     def _make_array_type(self, element_type, info):
-        name = element_type + 'List'    # reserved by check_defn_name_str()
+        name = f'{element_type}List'
         if not self.lookup_type(name):
             self._def_entity(QAPISchemaArrayType(name, info, element_type))
         return name
@@ -1053,14 +1024,9 @@ class QAPISchema:
         if not members:
             return None
         # See also QAPISchemaObjectTypeMember.describe()
-        name = 'q_obj_%s-%s' % (name, role)
+        name = f'q_obj_{name}-{role}'
         typ = self.lookup_entity(name, QAPISchemaObjectType)
-        if typ:
-            # The implicit object type has multiple users.  This can
-            # only be a duplicate definition, which will be flagged
-            # later.
-            pass
-        else:
+        if not typ:
             self._def_entity(QAPISchemaObjectType(
                 name, info, None, ifcond, None, None, members, None))
         return name

@@ -76,9 +76,7 @@ class QAPIGen:
         if self.fname.startswith('../'):
             return
         pathname = os.path.join(output_dir, self.fname)
-        odir = os.path.dirname(pathname)
-
-        if odir:
+        if odir := os.path.dirname(pathname):
             os.makedirs(odir, exist_ok=True)
 
         # use os.open for O_CREAT to create and read a non-existant file
@@ -115,7 +113,7 @@ def build_params(arg_type: Optional[QAPISchemaObjectType],
     sep = ''
     if boxed:
         assert arg_type
-        ret += '%s arg' % arg_type.c_param_type()
+        ret += f'{arg_type.c_param_type()} arg'
         sep = ', '
     elif arg_type:
         assert not arg_type.variants
@@ -124,9 +122,8 @@ def build_params(arg_type: Optional[QAPISchemaObjectType],
             ret += sep
             sep = ', '
             if memb.need_has():
-                ret += 'bool has_%s, ' % c_name(memb.name)
-            ret += '%s %s' % (memb.type.c_param_type(),
-                              c_name(memb.name))
+                ret += f'bool has_{c_name(memb.name)}, '
+            ret += f'{memb.type.c_param_type()} {c_name(memb.name)}'
     if extra:
         ret += sep + extra
     return ret if ret else 'void'
@@ -288,9 +285,7 @@ class QAPISchemaModularCVisitor(QAPISchemaVisitor):
 
     @staticmethod
     def _module_dirname(name: str) -> str:
-        if QAPISchemaModule.is_user_module(name):
-            return os.path.dirname(name)
-        return ''
+        return os.path.dirname(name) if QAPISchemaModule.is_user_module(name) else ''
 
     def _module_basename(self, what: str, name: str) -> str:
         ret = '' if QAPISchemaModule.is_builtin_module(name) else self._prefix
@@ -298,10 +293,10 @@ class QAPISchemaModularCVisitor(QAPISchemaVisitor):
             basename = os.path.basename(name)
             ret += what
             if name != self._main_module:
-                ret += '-' + os.path.splitext(basename)[0]
+                ret += f'-{os.path.splitext(basename)[0]}'
         else:
             assert QAPISchemaModule.is_system_module(name)
-            ret += re.sub(r'-', '-' + name[2:] + '-', what)
+            ret += re.sub(r'-', f'-{name[2:]}-', what)
         return ret
 
     def _module_filename(self, what: str, name: str) -> str:
@@ -313,13 +308,10 @@ class QAPISchemaModularCVisitor(QAPISchemaVisitor):
             if self._main_module is None:
                 self._main_module = name
         basename = self._module_filename(self._what, name)
-        genc = QAPIGenC(basename + '.c', blurb, self._pydoc)
-        genh = QAPIGenH(basename + '.h', blurb, self._pydoc)
+        genc = QAPIGenC(f'{basename}.c', blurb, self._pydoc)
+        genh = QAPIGenH(f'{basename}.h', blurb, self._pydoc)
 
-        gent: Optional[QAPIGenTrace] = None
-        if self._gen_tracing:
-            gent = QAPIGenTrace(basename + '.trace-events')
-
+        gent = QAPIGenTrace(f'{basename}.trace-events') if self._gen_tracing else None
         self._module[name] = (genc, genh, gent)
         self._current_module = name
 

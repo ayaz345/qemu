@@ -108,7 +108,7 @@ def calculate_attribs():
 
     # Recurse down macros, find attributes from sub-macros
     macroValues = list(macros.values())
-    allmacros_restr = "|".join(set([m.re.pattern for m in macroValues]))
+    allmacros_restr = "|".join({m.re.pattern for m in macroValues})
     allmacros_re = re.compile(allmacros_restr)
     for macro in macroValues:
         expand_macro_attribs(macro, allmacros_re)
@@ -162,8 +162,7 @@ class Macro(object):
 
 
 def MACROATTRIB(macname, beh, attribstring):
-    attribstring = attribstring.replace("(", "").replace(")", "")
-    if attribstring:
+    if attribstring := attribstring.replace("(", "").replace(")", ""):
         attribs = attribstring.split(",")
     else:
         attribs = []
@@ -313,7 +312,7 @@ def imm_name(immlett):
 
 def read_semantics_file(name):
     eval_line = ""
-    for line in open(name, "rt").readlines():
+    for line in open(name, "rt"):
         if not line.startswith("#"):
             eval_line += line
             if line.endswith("\\\n"):
@@ -328,17 +327,17 @@ def read_attribs_file(name):
         r"DEF_ATTRIB\(([A-Za-z0-9_]+), ([^,]*), "
         + r'"([A-Za-z0-9_\.]*)", "([A-Za-z0-9_\.]*)"\)'
     )
-    for line in open(name, "rt").readlines():
+    for line in open(name, "rt"):
         if not attribre.match(line):
             continue
         (attrib_base, descr, rreg, wreg) = attribre.findall(line)[0]
-        attrib_base = "A_" + attrib_base
+        attrib_base = f"A_{attrib_base}"
         attribinfo[attrib_base] = {"rreg": rreg, "wreg": wreg, "descr": descr}
 
 
 def read_overrides_file(name):
     overridere = re.compile("#define fGEN_TCG_([A-Za-z0-9_]+)\(.*")
-    for line in open(name, "rt").readlines():
+    for line in open(name, "rt"):
         if not overridere.match(line):
             continue
         tag = overridere.findall(line)[0]

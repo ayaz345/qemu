@@ -51,13 +51,11 @@ class FileMatch:
 
     @property
     def name(self) -> str:
-        if 'name' not in self.match.groupdict():
-            return '[no name]'
-        return self.group('name')
+        return self.group('name') if 'name' in self.match.groupdict() else '[no name]'
 
     @classmethod
-    def compiled_re(klass):
-        return re.compile(klass.regexp, re.MULTILINE)
+    def compiled_re(cls):
+        return re.compile(cls.regexp, re.MULTILINE)
 
     def start(self) -> int:
         return self.match.start()
@@ -72,13 +70,13 @@ class FileMatch:
         return self.match.group(group)
 
     def getgroup(self, group: str) -> Optional[str]:
-        if group not in self.match.groupdict():
-            return None
-        return self.match.group(group)
+        return None if group not in self.match.groupdict() else self.match.group(group)
 
     def log(self, level, fmt, *args) -> None:
         pos = self.line_col()
-        logger.log(level, '%s:%d:%d: '+fmt, self.file.filename, pos.line, pos.col, *args)
+        logger.log(
+            level, f'%s:%d:%d: {fmt}', self.file.filename, pos.line, pos.col, *args
+        )
 
     def debug(self, fmt, *args) -> None:
         self.log(logging.DEBUG, fmt, *args)
@@ -136,9 +134,11 @@ class FileMatch:
             yield self.make_patch(replacement)
 
     @classmethod
-    def has_replacement_rule(klass) -> bool:
-        return (klass.gen_patches is not FileMatch.gen_patches
-                or klass.replacement is not FileMatch.replacement)
+    def has_replacement_rule(cls) -> bool:
+        return (
+            cls.gen_patches is not FileMatch.gen_patches
+            or cls.replacement is not FileMatch.replacement
+        )
 
     def contains(self, other: 'FileMatch') -> bool:
         return other.start() >= self.start() and other.end() <= self.end()
@@ -168,18 +168,18 @@ class FileMatch:
         raise NotImplementedError()
 
     @classmethod
-    def finditer(klass, content: str, pos=0, endpos=-1) -> Iterable[Match]:
+    def finditer(cls, content: str, pos=0, endpos=-1) -> Iterable[Match]:
         """Helper for re.finditer()"""
         if endpos >= 0:
             content = content[:endpos]
-        return klass.compiled_re().finditer(content, pos)
+        return cls.compiled_re().finditer(content, pos)
 
     @classmethod
-    def domatch(klass, content: str, pos=0, endpos=-1) -> Optional[Match]:
+    def domatch(cls, content: str, pos=0, endpos=-1) -> Optional[Match]:
         """Helper for re.match()"""
         if endpos >= 0:
             content = content[:endpos]
-        return klass.compiled_re().match(content, pos)
+        return cls.compiled_re().match(content, pos)
 
     def group_finditer(self, klass: Type['FileMatch'], group: Union[str, int]) -> Iterable['FileMatch']:
         assert self.file.original_content
@@ -193,10 +193,7 @@ class FileMatch:
         m = klass.domatch(self.file.original_content,
                           self.match.start(group),
                           self.match.end(group))
-        if not m:
-            return None
-        else:
-            return klass(self.file, m)
+        return None if not m else klass(self.file, m)
 
     def group_match(self, group: Union[str, int]) -> 'FileMatch':
         m = self.try_group_match(FullMatch, group)
@@ -219,8 +216,7 @@ def all_subclasses(c: Type[FileMatch]) -> Iterable[Type[FileMatch]]:
         yield from all_subclasses(sc)
 
 def match_class_dict() -> Dict[str, Type[FileMatch]]:
-    d = dict((t.__name__, t) for t in all_subclasses(FileMatch))
-    return d
+    return {t.__name__: t for t in all_subclasses(FileMatch)}
 
 def names(matches: Iterable[FileMatch]) -> Iterable[str]:
     return [m.name for m in matches]
@@ -372,8 +368,11 @@ class FileInfo(RegexpScanner):
         class_dict = match_class_dict()
         if class_names is None:
             DBG("default class names")
-            class_names = list(name for name,klass in class_dict.items()
-                               if klass.has_replacement_rule())
+            class_names = [
+                name
+                for name, klass in class_dict.items()
+                if klass.has_replacement_rule()
+            ]
         DBG("class_names: %r", class_names)
         for cn in class_names:
             matches = self.matches_of_type(class_dict[cn])

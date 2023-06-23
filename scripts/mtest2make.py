@@ -54,7 +54,7 @@ def process_tests(test, targets, suites):
         # The suite name in the introspection info is "PROJECT" or "PROJECT:SUITE"
         if ':' in s:
             s = s.split(':')[1]
-            if s == 'slow' or s == 'thorough':
+            if s in ['slow', 'thorough']:
                 continue
         if s.endswith('-slow'):
             s = s[:-5]
@@ -73,7 +73,7 @@ def emit_prolog(suites, prefix):
     print(f'.PHONY: {prefix} do-meson-{prefix} {prefix}-report.junit.xml $(all-{prefix}-targets) $(all-{prefix}-xml)')
     print(f'ifeq ($(filter {prefix}, $(MAKECMDGOALS)),)')
     print(f'.{prefix}.mtestargs += $(call .speed.$(SPEED), $(.{prefix}.mtest-suites))')
-    print(f'endif')
+    print('endif')
     print(f'{prefix}-build: run-ninja')
     print(f'{prefix} $(all-{prefix}-targets): do-meson-{prefix}')
     print(f'do-meson-{prefix}: run-ninja; $(if $(MAKE.n),,+)$(MESON) test $(.{prefix}.mtestargs)')
@@ -94,7 +94,7 @@ def emit_suite(name, suite, prefix):
     targets = f'{prefix}-{name} {prefix}-report-{name}.junit.xml {prefix} {prefix}-report.junit.xml'
     print(f'ifneq ($(filter {targets}, $(MAKECMDGOALS)),)')
     print(f'.{prefix}.mtest-suites += ' + ' '.join(suite.names(name)))
-    print(f'endif')
+    print('endif')
 
 targets = {t['id']: [os.path.relpath(f) for f in t['filename']]
            for t in introspect['targets']}

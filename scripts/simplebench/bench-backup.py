@@ -59,9 +59,9 @@ def bench(args):
         if src == 'nbd':
             source = nbd_drv
         elif args.qcow2_sources:
-            source = drv_qcow2(drv_file(dirs[src] + '/test-source.qcow2'))
+            source = drv_qcow2(drv_file(f'{dirs[src]}/test-source.qcow2'))
         else:
-            source = drv_file(dirs[src] + '/test-source')
+            source = drv_file(f'{dirs[src]}/test-source')
 
         if dst == 'nbd':
             test_cases.append({'id': t, 'source': source, 'target': nbd_drv})
@@ -74,7 +74,7 @@ def bench(args):
 
         for c in target_caches:
             o_direct = c == 'direct'
-            fname = dirs[dst] + '/test-target'
+            fname = f'{dirs[dst]}/test-target'
             if args.compressed:
                 fname += '.qcow2'
             target = drv_file(fname, o_direct=o_direct)

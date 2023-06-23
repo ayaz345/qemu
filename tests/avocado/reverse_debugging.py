@@ -45,10 +45,13 @@ class ReverseDebugging(LinuxKernelTest):
             logger.info('replaying the execution...')
             mode = 'replay'
             vm.add_args('-gdb', 'tcp::%d' % port, '-S')
-        vm.add_args('-icount', 'shift=%s,rr=%s,rrfile=%s,rrsnapshot=init' %
-                    (shift, mode, replay_path),
-                    '-net', 'none')
-        vm.add_args('-drive', 'file=%s,if=none' % image_path)
+        vm.add_args(
+            '-icount',
+            f'shift={shift},rr={mode},rrfile={replay_path},rrsnapshot=init',
+            '-net',
+            'none',
+        )
+        vm.add_args('-drive', f'file={image_path},if=none')
         if args:
             vm.add_args(*args)
         vm.launch()
@@ -106,7 +109,7 @@ class ReverseDebugging(LinuxKernelTest):
         if qemu_img is False:
             self.cancel('Could not find "qemu-img", which is required to '
                         'create the temporary qcow2 image')
-        cmd = '%s create -f qcow2 %s 128M' % (qemu_img, image_path)
+        cmd = f'{qemu_img} create -f qcow2 {image_path} 128M'
         process.run(cmd)
 
         replay_path = os.path.join(self.workdir, 'replay.bin')
@@ -119,7 +122,7 @@ class ReverseDebugging(LinuxKernelTest):
         last_icount = self.vm_get_icount(vm)
         vm.shutdown()
 
-        logger.info("recorded log with %s+ steps" % last_icount)
+        logger.info(f"recorded log with {last_icount}+ steps")
 
         # replay and run debug commands
         vm = self.run_vm(False, shift, args, replay_path, image_path, port)
@@ -150,7 +153,7 @@ class ReverseDebugging(LinuxKernelTest):
             self.check_pc(g, addr)
             logger.info('found position %x' % addr)
 
-        logger.info('seeking to the end (icount %s)' % (last_icount - 1))
+        logger.info(f'seeking to the end (icount {last_icount - 1})')
         vm.qmp('replay-break', icount=last_icount - 1)
         # continue - will return after pausing
         g.cmd(b'c', b'T02thread:01;')

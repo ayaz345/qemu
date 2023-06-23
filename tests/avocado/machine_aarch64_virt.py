@@ -37,17 +37,17 @@ class Aarch64VirtMachine(QemuSystemTest):
         :avocado: tags=machine:virt
         :avocado: tags=accel:tcg
         """
-        iso_url = ('https://dl-cdn.alpinelinux.org/'
-                   'alpine/v3.17/releases/aarch64/'
-                   'alpine-standard-3.17.2-aarch64.iso')
-
         # Alpine use sha256 so I recalculated this myself
         iso_sha1 = '76284fcd7b41fe899b0c2375ceb8470803eea839'
+        iso_url = (
+            'https://dl-cdn.alpinelinux.org/'
+            'alpine/v3.17/releases/aarch64/'
+            'alpine-standard-3.17.2-aarch64.iso'
+        )
         iso_path = self.fetch_asset(iso_url, asset_hash=iso_sha1)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyAMA0')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyAMA0'
         self.require_accelerator("tcg")
 
         self.vm.add_args("-accel", "tcg")
@@ -75,14 +75,12 @@ class Aarch64VirtMachine(QemuSystemTest):
         """
         logger = logging.getLogger('aarch64_virt')
 
-        kernel_url = ('https://fileserver.linaro.org/s/'
-                      'z6B2ARM7DQT3HWN/download')
         kernel_hash = 'ed11daab50c151dde0e1e9c9cb8b2d9bd3215347'
+        kernel_url = 'https://fileserver.linaro.org/s/' 'z6B2ARM7DQT3HWN/download'
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyAMA0')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyAMA0'
         self.require_accelerator("tcg")
         self.vm.add_args('-cpu', 'max,pauth-impdef=on',
                          '-machine', machine,
@@ -104,7 +102,7 @@ class Aarch64VirtMachine(QemuSystemTest):
         if qemu_img is False:
             self.cancel('Could not find "qemu-img", which is required to '
                         'create the temporary qcow2 image')
-        cmd = '%s create -f qcow2 %s 8M' % (qemu_img, image_path)
+        cmd = f'{qemu_img} create -f qcow2 {image_path} 8M'
         process.run(cmd)
 
         # Add the device

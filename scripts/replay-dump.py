@@ -66,9 +66,8 @@ def read_event(fin):
     "Read a single byte event, but save some state"
     if replay_state.already_read:
         return replay_state.get_event()
-    else:
-        replay_state.set_event(read_byte(fin))
-        return replay_state.event
+    replay_state.set_event(read_byte(fin))
+    return replay_state.event
 
 def read_word(fin):
     "Read a 16 bit word"
@@ -87,14 +86,12 @@ Decoder = namedtuple("Decoder", "eid name fn")
 
 def call_decode(table, index, dumpfile):
     "Search decode table for next step"
-    decoder = next((d for d in table if d.eid == index), None)
-    if not decoder:
-        print("Could not decode index: %d" % (index))
-        print("Entry is: %s" % (decoder))
-        print("Decode Table is:\n%s" % (table))
-        return False
-    else:
+    if decoder := next((d for d in table if d.eid == index), None):
         return decoder.fn(decoder.eid, decoder.name, dumpfile)
+    print("Could not decode index: %d" % (index))
+    print(f"Entry is: {decoder}")
+    print("Decode Table is:\n%s" % (table))
+    return False
 
 # Print event
 def print_event(eid, name, string=None, event_count=None):
@@ -112,7 +109,7 @@ def print_event(eid, name, string=None, event_count=None):
 
 def decode_unimp(eid, name, _unused_dumpfile):
     "Unimplimented decoder, will trigger exit"
-    print("%s not handled - will now stop" % (name))
+    print(f"{name} not handled - will now stop")
     return False
 
 # Checkpoint decoder

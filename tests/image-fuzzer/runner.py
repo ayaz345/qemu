@@ -125,17 +125,14 @@ class TestEnv(object):
         Path to qemu-img and qemu-io will be retrieved from 'QEMU_IMG' and
         'QEMU_IO' environment variables.
         """
-        if seed is not None:
-            self.seed = seed
-        else:
-            self.seed = str(random.randint(0, sys.maxsize))
+        self.seed = seed if seed is not None else str(random.randint(0, sys.maxsize))
         random.seed(self.seed)
 
         self.init_path = os.getcwd()
         self.work_dir = work_dir
-        self.current_dir = os.path.join(work_dir, 'test-' + test_id)
+        self.current_dir = os.path.join(work_dir, f'test-{test_id}')
         self.qemu_img = \
-            os.environ.get('QEMU_IMG', 'qemu-img').strip().split(' ')
+                os.environ.get('QEMU_IMG', 'qemu-img').strip().split(' ')
         self.qemu_io = os.environ.get('QEMU_IO', 'qemu-io').strip().split(' ')
         self.commands = [['qemu-img', 'check', '-f', 'qcow2', '$test_img'],
                          ['qemu-img', 'info', '-f', 'qcow2', '$test_img'],
@@ -150,16 +147,26 @@ class TestEnv(object):
                           'discard $off $len'],
                          ['qemu-io', '$test_img', '-c',
                           'truncate $off']]
-        for fmt in ['raw', 'vmdk', 'vdi', 'qcow2', 'file', 'qed', 'vpc']:
-            self.commands.append(
-                ['qemu-img', 'convert', '-f', 'qcow2', '-O', fmt,
-                 '$test_img', 'converted_image.' + fmt])
-
+        self.commands.extend(
+            [
+                'qemu-img',
+                'convert',
+                '-f',
+                'qcow2',
+                '-O',
+                fmt,
+                '$test_img',
+                f'converted_image.{fmt}',
+            ]
+            for fmt in ['raw', 'vmdk', 'vdi', 'qcow2', 'file', 'qed', 'vpc']
+        )
         try:
             os.makedirs(self.current_dir)
         except OSError as e:
-            print("Error: The working directory '%s' cannot be used. Reason: %s"\
-                % (self.work_dir, e.strerror), file=sys.stderr)
+            print(
+                f"Error: The working directory '{self.work_dir}' cannot be used. Reason: {e.strerror}",
+                file=sys.stderr,
+            )
             raise TestException
         self.log = open(os.path.join(self.current_dir, "test.log"), "w")
         self.parent_log = open(run_log, "a")
@@ -178,7 +185,7 @@ class TestEnv(object):
         # All formats supported by the 'qemu-img create' command.
         backing_file_fmt = random.choice(['raw', 'vmdk', 'vdi', 'qcow2',
                                           'file', 'qed', 'vpc'])
-        backing_file_name = 'backing_img.' + backing_file_fmt
+        backing_file_name = f'backing_img.{backing_file_fmt}'
         backing_file_size = random.randint(MIN_BACKING_FILE_SIZE,
                                            MAX_BACKING_FILE_SIZE) * (1 << 20)
         cmd = self.qemu_img + ['create', '-f', backing_file_fmt,
@@ -203,19 +210,15 @@ class TestEnv(object):
         its exit status. If the application was killed by a signal, the test
         is marked as failed.
         """
-        if input_commands is None:
-            commands = self.commands
-        else:
-            commands = input_commands
-
+        commands = self.commands if input_commands is None else input_commands
         os.chdir(self.current_dir)
         backing_file_name, backing_file_fmt = self._create_backing_file()
         img_size = image_generator.create_image(
             'test.img', backing_file_name, backing_file_fmt, fuzz_config)
+        # 'off' and 'len' are multiple of the sector size
+        sector_size = 512
         for item in commands:
             shutil.copy('test.img', 'copy.img')
-            # 'off' and 'len' are multiple of the sector size
-            sector_size = 512
             start = random.randrange(0, img_size + 1, sector_size)
             end = random.randrange(start, img_size + 1, sector_size)
 
@@ -237,8 +240,8 @@ class TestEnv(object):
 
             # Log string with the test header
             test_summary = "Seed: %s\nCommand: %s\nTest directory: %s\n" \
-                           "Backing file: %s\n" \
-                           % (self.seed, " ".join(current_cmd),
+                               "Backing file: %s\n" \
+                               % (self.seed, " ".join(current_cmd),
                               self.current_dir, backing_file_name)
             temp_log = io.StringIO()
             try:
@@ -256,12 +259,11 @@ class TestEnv(object):
                          % (test_summary, str_signal(-retcode)),
                          sys.stderr, self.log, self.parent_log)
                 self.failed = True
-            else:
-                if self.log_all:
-                    self.log.write(temp_log.getvalue())
-                    multilog("%sPASS: Application exited with the code " \
+            elif self.log_all:
+                self.log.write(temp_log.getvalue())
+                multilog("%sPASS: Application exited with the code " \
                              "'%d'\n\n" % (test_summary, retcode),
-                             sys.stdout, self.log, self.parent_log)
+                         sys.stdout, self.log, self.parent_log)
             temp_log.close()
             os.remove('copy.img')
 
@@ -339,10 +341,9 @@ if __name__ == '__main__':
         # Python 2.4 doesn't support 'finally' and 'except' in the same 'try'
         # block
         try:
-            try:
-                test.execute(command, fuzz_config)
-            except TestException:
-                sys.exit(1)
+            test.execute(command, fuzz_config)
+        except TestException:
+            sys.exit(1)
         finally:
             test.finish()
 

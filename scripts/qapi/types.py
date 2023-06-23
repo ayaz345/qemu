@@ -251,17 +251,19 @@ def gen_variants(variants: QAPISchemaVariants) -> str:
 
 
 def gen_type_cleanup_decl(name: str) -> str:
-    ret = mcgen('''
+    return mcgen(
+        '''
 
 void qapi_free_%(c_name)s(%(c_name)s *obj);
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(%(c_name)s, qapi_free_%(c_name)s)
 ''',
-                c_name=c_name(name))
-    return ret
+        c_name=c_name(name),
+    )
 
 
 def gen_type_cleanup(name: str) -> str:
-    ret = mcgen('''
+    return mcgen(
+        '''
 
 void qapi_free_%(c_name)s(%(c_name)s *obj)
 {
@@ -276,8 +278,8 @@ void qapi_free_%(c_name)s(%(c_name)s *obj)
     visit_free(v);
 }
 ''',
-                c_name=c_name(name))
-    return ret
+        c_name=c_name(name),
+    )
 
 
 class QAPISchemaGenTypeVisitor(QAPISchemaModularCVisitor):

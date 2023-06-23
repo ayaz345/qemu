@@ -23,12 +23,11 @@ def get_string_struct(line):
     return data[2].replace('"', '')[:-1]
 
 def add_module(fheader, library, format_name, protocol_name):
-    lines = []
-    lines.append('.library_name = "' + library + '",')
+    lines = [f'.library_name = "{library}",']
     if format_name != "":
-        lines.append('.format_name = "' + format_name + '",')
+        lines.append(f'.format_name = "{format_name}",')
     if protocol_name != "":
-        lines.append('.protocol_name = "' + protocol_name + '",')
+        lines.append(f'.protocol_name = "{protocol_name}",')
 
     text = '\n        '.join(lines)
     fheader.write('\n    {\n        ' + text + '\n    },')
@@ -91,7 +90,7 @@ if __name__ == '__main__':
             if os.path.isfile(filename):
                 process_file(fheader, filename)
             else:
-                print("File " + filename + " does not exist.", file=sys.stderr)
+                print(f"File {filename} does not exist.", file=sys.stderr)
                 sys.exit(1)
 
         print_bottom(fheader)

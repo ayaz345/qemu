@@ -26,9 +26,11 @@ class LoongArchMachine(QemuSystemTest):
         :avocado: tags=machine:virt
         """
 
-        kernel_url = ('https://github.com/yangxiaojuan-loongson/qemu-binary/'
-                      'releases/download/binary-files/vmlinuz.efi')
         kernel_hash = '951b485b16e3788b6db03a3e1793c067009e31a2'
+        kernel_url = (
+            'https://github.com/yangxiaojuan-loongson/qemu-binary/'
+            'releases/download/binary-files/vmlinuz.efi'
+        )
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
         initrd_url = ('https://github.com/yangxiaojuan-loongson/qemu-binary/'
@@ -42,8 +44,7 @@ class LoongArchMachine(QemuSystemTest):
         bios_path = self.fetch_asset(bios_url, asset_hash=bios_hash)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'root=/dev/ram rdinit=/sbin/init console=ttyS0,115200')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}root=/dev/ram rdinit=/sbin/init console=ttyS0,115200'
         self.vm.add_args('-nographic',
                          '-smp', '4',
                          '-m', '1024',

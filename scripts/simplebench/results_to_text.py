@@ -27,22 +27,17 @@ tabulate.PRESERVE_WHITESPACE = True
 
 def format_value(x, stdev):
     stdev_pr = stdev / x * 100
-    if stdev_pr < 1.5:
-        # don't care too much
-        return f'{x:.2g}'
-    else:
-        return f'{x:.2g} ± {math.ceil(stdev_pr)}%'
+    return f'{x:.2g}' if stdev_pr < 1.5 else f'{x:.2g} ± {math.ceil(stdev_pr)}%'
 
 
 def result_to_text(result):
     """Return text representation of bench_one() returned dict."""
-    if 'average' in result:
-        s = format_value(result['average'], result['stdev'])
-        if 'n-failed' in result:
-            s += '\n({} failed)'.format(result['n-failed'])
-        return s
-    else:
+    if 'average' not in result:
         return 'FAILED'
+    s = format_value(result['average'], result['stdev'])
+    if 'n-failed' in result:
+        s += f"\n({result['n-failed']} failed)"
+    return s
 
 
 def results_dimension(results):
@@ -111,7 +106,7 @@ def results_to_text(results):
             row.append(cell)
         tab.append(row)
 
-    return f'All results are in {dim}\n\n' + tabulate.tabulate(tab)
+    return f'All results are in {dim}\n\n{tabulate.tabulate(tab)}'
 
 
 if __name__ == '__main__':

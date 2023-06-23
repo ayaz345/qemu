@@ -232,7 +232,7 @@ def test_initial_includes():
 
 /* pflash_cfi01.c */
 '''
-    print(repr(list(m.groupdict() for m in InitialIncludes.finditer(c))))
+    print(repr([m.groupdict() for m in InitialIncludes.finditer(c)]))
     m = InitialIncludes.domatch(c)
     assert m
     print(repr(m.group(0)))
@@ -247,7 +247,7 @@ def test_initial_includes():
 
 
 '''
-    print(repr(list(m.groupdict() for m in InitialIncludes.finditer(c))))
+    print(repr([m.groupdict() for m in InitialIncludes.finditer(c)]))
     m = InitialIncludes.domatch(c)
     assert m
     print(repr(m.group(0)))
@@ -274,7 +274,7 @@ def test_initial_includes():
 /* Missing stuff:
    SCTRL_P[12](END|ST)INC
 '''
-    print(repr(list(m.groupdict() for m in InitialIncludes.finditer(c))))
+    print(repr([m.groupdict() for m in InitialIncludes.finditer(c)]))
     m = InitialIncludes.domatch(c)
     assert m
     print(repr(m.group(0)))

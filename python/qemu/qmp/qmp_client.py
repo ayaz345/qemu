@@ -400,8 +400,7 @@ class QMPClient(AsyncProtocol[Message], Events):
         :return: A single QMP `Message`.
         """
         msg_bytes = await self._readline()
-        msg = Message(msg_bytes, eager=True)
-        return msg
+        return Message(msg_bytes, eager=True)
 
     @upper_half
     @bottom_half
@@ -564,7 +563,7 @@ class QMPClient(AsyncProtocol[Message], Events):
         :raise ExecuteError: When the server returns an error response.
         :raise ExecInterruptedError: if the connection was terminated early.
         """
-        if not ('execute' in msg or 'exec-oob' in msg):
+        if 'execute' not in msg and 'exec-oob' not in msg:
             raise ValueError("Requires 'execute' or 'exec-oob' message")
 
         # Copy the Message so that the ID assigned by _execute() is

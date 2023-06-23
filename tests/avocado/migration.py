@@ -70,7 +70,7 @@ class MigrationTest(QemuSystemTest):
 
     def migration_with_unix(self):
         with tempfile.TemporaryDirectory(prefix='socket_') as socket_path:
-            dest_uri = 'unix:%s/qemu-test.sock' % socket_path
+            dest_uri = f'unix:{socket_path}/qemu-test.sock'
             self.do_migrate(dest_uri)
 
     @skipUnless(find_command('nc', default=False), "'nc' command not found")

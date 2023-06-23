@@ -96,10 +96,7 @@ def create_task(coro: Coroutine[Any, Any, T],
     :return: An `asyncio.Future` object.
     """
     if sys.version_info >= (3, 7):
-        if loop is not None:
-            return loop.create_task(coro)
-        return asyncio.create_task(coro)  # pylint: disable=no-member
-
+        return asyncio.create_task(coro) if loop is None else loop.create_task(coro)
     # Python 3.6:
     return asyncio.ensure_future(coro, loop=loop)
 
@@ -183,12 +180,9 @@ def exception_summary(exc: BaseException) -> str:
     name = type(exc).__qualname__
     smod = type(exc).__module__
     if smod not in ("__main__", "builtins"):
-        name = smod + '.' + name
+        name = f'{smod}.{name}'
 
-    error = str(exc)
-    if error:
-        return f"{name}: {error}"
-    return name
+    return f"{name}: {error}" if (error := str(exc)) else name
 
 
 def pretty_traceback(prefix: str = "  | ") -> str:
@@ -211,9 +205,6 @@ def pretty_traceback(prefix: str = "  | ") -> str:
     """
     output = "".join(traceback.format_exception(*sys.exc_info()))
 
-    exc_lines = []
-    for line in output.split('\n'):
-        exc_lines.append(prefix + line)
-
+    exc_lines = [prefix + line for line in output.split('\n')]
     # The last line is always empty, omit it
     return "\n".join(exc_lines[:-1])

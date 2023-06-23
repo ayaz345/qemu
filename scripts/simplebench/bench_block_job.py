@@ -48,15 +48,15 @@ def bench_block_job(cmd, cmd_args, qemu_args):
     try:
         vm.launch()
     except OSError as e:
-        return {'error': 'popen failed: ' + str(e)}
+        return {'error': f'popen failed: {str(e)}'}
     except (ConnectError, socket.timeout):
-        return {'error': 'qemu failed: ' + str(vm.get_log())}
+        return {'error': f'qemu failed: {str(vm.get_log())}'}
 
     try:
         res = vm.qmp(cmd, **cmd_args)
         if res != {'return': {}}:
             vm.shutdown()
-            return {'error': '"{}" command failed: {}'.format(cmd, str(res))}
+            return {'error': f'"{cmd}" command failed: {str(res)}'}
 
         e = vm.event_wait('JOB_STATUS_CHANGE')
         assert e['data']['status'] == 'created'
@@ -68,8 +68,7 @@ def bench_block_job(cmd, cmd_args, qemu_args):
                             ('BLOCK_JOB_FAILED', None)), timeout=True)
         if e['event'] not in ('BLOCK_JOB_READY', 'BLOCK_JOB_COMPLETED'):
             vm.shutdown()
-            return {'error': 'block-job failed: ' + str(e),
-                    'vm-log': vm.get_log()}
+            return {'error': f'block-job failed: {str(e)}', 'vm-log': vm.get_log()}
         if 'error' in e['data']:
             vm.shutdown()
             return {'error': 'block-job failed: ' + e['data']['error'],
@@ -146,9 +145,9 @@ if __name__ == '__main__':
     import sys
 
     if len(sys.argv) < 4:
-        print('USAGE: {} <qmp block-job command name> '
-              '<json string of arguments for the command> '
-              '<qemu binary path and arguments>'.format(sys.argv[0]))
+        print(
+            f'USAGE: {sys.argv[0]} <qmp block-job command name> <json string of arguments for the command> <qemu binary path and arguments>'
+        )
         exit(1)
 
     res = bench_block_job(sys.argv[1], json.loads(sys.argv[2]), sys.argv[3:])

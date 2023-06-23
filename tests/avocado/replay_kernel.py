@@ -49,20 +49,26 @@ class ReplayKernelBase(LinuxKernelTest):
         else:
             logger.info('replaying the execution...')
             mode = 'replay'
-        vm.add_args('-icount', 'shift=%s,rr=%s,rrfile=%s' %
-                    (shift, mode, replay_path),
-                    '-kernel', kernel_path,
-                    '-append', kernel_command_line,
-                    '-net', 'none',
-                    '-no-reboot')
+        vm.add_args(
+            '-icount',
+            f'shift={shift},rr={mode},rrfile={replay_path}',
+            '-kernel',
+            kernel_path,
+            '-append',
+            kernel_command_line,
+            '-net',
+            'none',
+            '-no-reboot',
+        )
         if args:
             vm.add_args(*args)
         vm.launch()
         self.wait_for_console_pattern(console_pattern, vm)
         if record:
             vm.shutdown()
-            logger.info('finished the recording with log size %s bytes'
-                        % os.path.getsize(replay_path))
+            logger.info(
+                f'finished the recording with log size {os.path.getsize(replay_path)} bytes'
+            )
         else:
             vm.wait()
             logger.info('successfully finished the replay')
@@ -93,7 +99,7 @@ class ReplayKernelNormal(ReplayKernelBase):
         kernel_hash = '23bebd2680757891cf7adedb033532163a792495'
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
-        kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'console=ttyS0'
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0'
         console_pattern = 'VFS: Cannot open root device'
 
         self.run_rr(kernel_path, kernel_command_line, console_pattern, shift=5)
@@ -111,8 +117,8 @@ class ReplayKernelNormal(ReplayKernelBase):
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinux-2.6.32-5-4kc-malta')
-        kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'console=ttyS0'
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0'
+        console_pattern = f'Kernel command line: {kernel_command_line}'
 
         self.run_rr(kernel_path, kernel_command_line, console_pattern, shift=5)
 
@@ -139,8 +145,8 @@ class ReplayKernelNormal(ReplayKernelBase):
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinux-2.6.32-5-5kc-malta')
-        kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'console=ttyS0'
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0'
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.run_rr(kernel_path, kernel_command_line, console_pattern, shift=5)
 
     def test_aarch64_virt(self):
@@ -149,14 +155,15 @@ class ReplayKernelNormal(ReplayKernelBase):
         :avocado: tags=machine:virt
         :avocado: tags=cpu:cortex-a53
         """
-        kernel_url = ('https://archives.fedoraproject.org/pub/archive/fedora'
-                      '/linux/releases/29/Everything/aarch64/os/images/pxeboot'
-                      '/vmlinuz')
         kernel_hash = '8c73e469fc6ea06a58dc83a628fc695b693b8493'
+        kernel_url = (
+            'https://archives.fedoraproject.org/pub/archive/fedora'
+            '/linux/releases/29/Everything/aarch64/os/images/pxeboot'
+            '/vmlinuz'
+        )
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyAMA0')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyAMA0'
         console_pattern = 'VFS: Cannot open root device'
 
         self.run_rr(kernel_path, kernel_command_line, console_pattern)
@@ -166,14 +173,15 @@ class ReplayKernelNormal(ReplayKernelBase):
         :avocado: tags=arch:arm
         :avocado: tags=machine:virt
         """
-        kernel_url = ('https://archives.fedoraproject.org/pub/archive/fedora'
-                      '/linux/releases/29/Everything/armhfp/os/images/pxeboot'
-                      '/vmlinuz')
         kernel_hash = 'e9826d741b4fb04cadba8d4824d1ed3b7fb8b4d4'
+        kernel_url = (
+            'https://archives.fedoraproject.org/pub/archive/fedora'
+            '/linux/releases/29/Everything/armhfp/os/images/pxeboot'
+            '/vmlinuz'
+        )
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyAMA0')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyAMA0'
         console_pattern = 'VFS: Cannot open root device'
 
         self.run_rr(kernel_path, kernel_command_line, console_pattern, shift=1)
@@ -184,9 +192,11 @@ class ReplayKernelNormal(ReplayKernelBase):
         :avocado: tags=arch:arm
         :avocado: tags=machine:cubieboard
         """
-        deb_url = ('https://apt.armbian.com/pool/main/l/'
-                   'linux-5.10.16-sunxi/linux-image-current-sunxi_21.02.2_armhf.deb')
         deb_hash = '9fa84beda245cabf0b4fa84cf6eaa7738ead1da0'
+        deb_url = (
+            'https://apt.armbian.com/pool/main/l/'
+            'linux-5.10.16-sunxi/linux-image-current-sunxi_21.02.2_armhf.deb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinuz-5.10.16-sunxi')
@@ -200,10 +210,7 @@ class ReplayKernelNormal(ReplayKernelBase):
         initrd_path = os.path.join(self.workdir, 'rootfs.cpio')
         archive.gzip_uncompress(initrd_path_gz, initrd_path)
 
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0,115200 '
-                               'usbcore.nousb '
-                               'panic=-1 noreboot')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0,115200 usbcore.nousb panic=-1 noreboot'
         console_pattern = 'Boot successful.'
         self.run_rr(kernel_path, kernel_command_line, console_pattern, shift=1,
                     args=('-dtb', dtb_path,
@@ -221,8 +228,8 @@ class ReplayKernelNormal(ReplayKernelBase):
         kernel_hash = 'e8e8439103ef8053418ef062644ffd46a7919313'
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
-        kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'console=sclp0'
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=sclp0'
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.run_rr(kernel_path, kernel_command_line, console_pattern, shift=9)
 
     def test_alpha_clipper(self):
@@ -237,8 +244,8 @@ class ReplayKernelNormal(ReplayKernelBase):
 
         uncompressed_kernel = archive.uncompress(kernel_path, self.workdir)
 
-        kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'console=ttyS0'
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0'
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.run_rr(uncompressed_kernel, kernel_command_line, console_pattern, shift=9,
             args=('-nodefaults', ))
 
@@ -254,9 +261,9 @@ class ReplayKernelNormal(ReplayKernelBase):
         kernel_hash = '3fe04abfc852b66653b8c3c897a59a689270bc77'
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
-        kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'console=hvc0'
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=hvc0'
         # icount is not good enough for PPC64 for complete boot yet
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.run_rr(kernel_path, kernel_command_line, console_pattern)
 
     def test_m68k_q800(self):
@@ -264,16 +271,17 @@ class ReplayKernelNormal(ReplayKernelBase):
         :avocado: tags=arch:m68k
         :avocado: tags=machine:q800
         """
-        deb_url = ('https://snapshot.debian.org/archive/debian-ports'
-                   '/20191021T083923Z/pool-m68k/main'
-                   '/l/linux/kernel-image-5.3.0-1-m68k-di_5.3.7-1_m68k.udeb')
         deb_hash = '044954bb9be4160a3ce81f8bc1b5e856b75cccd1'
+        deb_url = (
+            'https://snapshot.debian.org/archive/debian-ports'
+            '/20191021T083923Z/pool-m68k/main'
+            '/l/linux/kernel-image-5.3.0-1-m68k-di_5.3.7-1_m68k.udeb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinux-5.3.0-1-m68k')
 
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0 vga=off')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0 vga=off'
         console_pattern = 'No filesystem could mount root'
         self.run_rr(kernel_path, kernel_command_line, console_pattern)
 
@@ -299,7 +307,7 @@ class ReplayKernelNormal(ReplayKernelBase):
         tar_url = ('https://qemu-advcal.gitlab.io'
                    '/qac-best-of-multiarch/download/day16.tar.xz')
         file_path = self.fetch_asset(tar_url, asset_hash=tar_hash)
-        dtb_path = self.workdir + '/day16/vexpress-v2p-ca9.dtb'
+        dtb_path = f'{self.workdir}/day16/vexpress-v2p-ca9.dtb'
         self.do_test_advcal_2018(file_path, 'winter.zImage',
                                  args=('-dtb', dtb_path))
 
@@ -422,10 +430,12 @@ class ReplayKernelSlow(ReplayKernelBase):
         :avocado: tags=endian:big
         :avocado: tags=slowness:high
         """
-        deb_url = ('http://snapshot.debian.org/archive/debian/'
-                   '20160601T041800Z/pool/main/l/linux/'
-                   'linux-image-4.5.0-2-4kc-malta_4.5.5-1_mips.deb')
         deb_hash = 'a3c84f3e88b54e06107d65a410d1d1e8e0f340f8'
+        deb_url = (
+            'http://snapshot.debian.org/archive/debian/'
+            '20160601T041800Z/pool/main/l/linux/'
+            'linux-image-4.5.0-2-4kc-malta_4.5.5-1_mips.deb'
+        )
         deb_path = self.fetch_asset(deb_url, asset_hash=deb_hash)
         kernel_path = self.extract_from_deb(deb_path,
                                             '/boot/vmlinux-4.5.0-2-4kc-malta')
@@ -434,12 +444,10 @@ class ReplayKernelSlow(ReplayKernelBase):
                       'mips/rootfs.cpio.gz')
         initrd_hash = 'bf806e17009360a866bf537f6de66590de349a99'
         initrd_path_gz = self.fetch_asset(initrd_url, asset_hash=initrd_hash)
-        initrd_path = self.workdir + "rootfs.cpio"
+        initrd_path = f"{self.workdir}rootfs.cpio"
         archive.gzip_uncompress(initrd_path_gz, initrd_path)
 
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0 console=tty '
-                               'rdinit=/sbin/init noreboot')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0 console=tty rdinit=/sbin/init noreboot'
         console_pattern = 'Boot successful.'
         self.run_rr(kernel_path, kernel_command_line, console_pattern, shift=5,
                     args=('-initrd', initrd_path))
@@ -453,10 +461,12 @@ class ReplayKernelSlow(ReplayKernelBase):
         :avocado: tags=slowness:high
         :avocado: tags=cpu:5KEc
         """
-        kernel_url = ('https://github.com/philmd/qemu-testing-blob/'
-                      'raw/9ad2df38/mips/malta/mips64el/'
-                      'vmlinux-3.19.3.mtoman.20150408')
         kernel_hash = '00d1d268fb9f7d8beda1de6bebcc46e884d71754'
+        kernel_url = (
+            'https://github.com/philmd/qemu-testing-blob/'
+            'raw/9ad2df38/mips/malta/mips64el/'
+            'vmlinux-3.19.3.mtoman.20150408'
+        )
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
         initrd_url = ('https://github.com/groeck/linux-build-test/'
                       'raw/8584a59e/rootfs/'
@@ -464,18 +474,16 @@ class ReplayKernelSlow(ReplayKernelBase):
         initrd_hash = '1dbb8a396e916847325284dbe2151167'
         initrd_path_gz = self.fetch_asset(initrd_url, algorithm='md5',
                                           asset_hash=initrd_hash)
-        initrd_path = self.workdir + "rootfs.cpio"
+        initrd_path = f"{self.workdir}rootfs.cpio"
         archive.gzip_uncompress(initrd_path_gz, initrd_path)
 
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0 console=tty '
-                               'rdinit=/sbin/init noreboot')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0 console=tty rdinit=/sbin/init noreboot'
         console_pattern = 'Boot successful.'
         self.run_rr(kernel_path, kernel_command_line, console_pattern, shift=5,
                     args=('-initrd', initrd_path))
 
     def do_test_mips_malta32el_nanomips(self, kernel_path_xz):
-        kernel_path = self.workdir + "kernel"
+        kernel_path = f"{self.workdir}kernel"
         with lzma.open(kernel_path_xz, 'rb') as f_in:
             with open(kernel_path, 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
@@ -483,7 +491,7 @@ class ReplayKernelSlow(ReplayKernelBase):
         kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
                                'mem=256m@@0x0 '
                                'console=ttyS0')
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         self.run_rr(kernel_path, kernel_command_line, console_pattern, shift=5)
 
     def test_mips_malta32el_nanomips_4k(self):

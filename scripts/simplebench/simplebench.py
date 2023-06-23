@@ -67,7 +67,7 @@ def bench_one(test_func, test_env, test_case, count=5, initial_run=True,
     for i in range(count):
         t = time.time()
 
-        print('  #run {}'.format(i+1))
+        print(f'  #run {i + 1}')
         do_drop_caches()
         res = test_func(test_env, test_case)
         print('   ', res)
@@ -128,8 +128,7 @@ def bench(test_func, test_envs, test_cases, *args, **vargs):
     n_tests = len(test_envs) * len(test_cases)
     for env in test_envs:
         for case in test_cases:
-            print('Testing {}/{}: {} :: {}'.format(n, n_tests,
-                                                   env['id'], case['id']))
+            print(f"Testing {n}/{n_tests}: {env['id']} :: {case['id']}")
             if case['id'] not in tab:
                 tab[case['id']] = {}
             tab[case['id']][env['id']] = bench_one(test_func, env, case,

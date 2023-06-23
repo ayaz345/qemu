@@ -39,7 +39,7 @@ def calculate_regid_reg(tag):
     for reg in ordered_implregs:
         reg_rd = 0
         reg_wr = 0
-        if ("A_IMPLICIT_WRITES_" + reg) in hex_common.attribdict[tag]:
+        if f"A_IMPLICIT_WRITES_{reg}" in hex_common.attribdict[tag]:
             reg_wr = 1
         if reg_rd and reg_wr:
             retstr += srcdst_lett
@@ -111,10 +111,7 @@ def main():
                     shamt = "0"
                 f.write(f""",'{sign}',{size},{shamt}""")
             if len(imms) == 1:
-                if sign.isupper():
-                    myu = "u"
-                else:
-                    myu = "U"
+                myu = "u" if sign.isupper() else "U"
                 f.write(f""",'{myu}',0,0""")
             f.write(")\n")
 

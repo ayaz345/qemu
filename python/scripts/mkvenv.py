@@ -167,9 +167,7 @@ class QemuEnvBuilder(venv.EnvBuilder):
 
     def get_parent_libpath(self) -> Optional[str]:
         """Return the libpath of the parent venv, if applicable."""
-        if self.use_parent_packages:
-            return sysconfig.get_path("purelib")
-        return None
+        return sysconfig.get_path("purelib") if self.use_parent_packages else None
 
     @staticmethod
     def compute_venv_libpath(context: SimpleNamespace) -> str:
@@ -258,9 +256,7 @@ def need_ensurepip() -> bool:
     """
     # Don't try to actually import them, it's fraught with danger:
     # https://github.com/pypa/setuptools/issues/2993
-    if find_spec("setuptools") and find_spec("pip"):
-        return False
-    return True
+    return not find_spec("setuptools") or not find_spec("pip")
 
 
 def check_ensurepip(prefix: str = "", suggest_remedy: bool = False) -> None:
@@ -375,9 +371,7 @@ def make_venv(  # pylint: disable=too-many-arguments
         logger.error("returncode: %d", exc.returncode)
 
         def _stringify(data: Union[str, bytes]) -> str:
-            if isinstance(data, bytes):
-                return data.decode()
-            return data
+            return data.decode() if isinstance(data, bytes) else data
 
         lines = []
         if exc.stdout:
@@ -542,15 +536,15 @@ def pkgname_from_depspec(dep_spec: str) -> str:
 
     See https://peps.python.org/pep-0508/#names
     """
-    match = re.match(
+    if match := re.match(
         r"^([A-Z0-9]([A-Z0-9._-]*[A-Z0-9])?)", dep_spec, re.IGNORECASE
-    )
-    if not match:
+    ):
+        return match[0]
+    else:
         raise ValueError(
             f"dep_spec '{dep_spec}'"
             " does not appear to contain a valid package name"
         )
-    return match.group(0)
 
 
 def _get_path_importlib(package: str) -> Optional[str]:
@@ -727,8 +721,7 @@ def diagnose(
         )
 
     if prog and not pkg_version:
-        which = shutil.which(prog)
-        if which:
+        if which := shutil.which(prog):
             if sys.base_prefix in site.PREFIXES:
                 pypath = Path(sys.executable).resolve()
                 lines.append(
@@ -872,8 +865,7 @@ def ensure(
     if not HAVE_DISTLIB:
         raise Ouch("a usable distlib could not be found, please install it")
 
-    result = _do_ensure(dep_specs, online, wheels_dir, prog)
-    if result:
+    if result := _do_ensure(dep_specs, online, wheels_dir, prog):
         # Well, that's not good.
         if result[1]:
             raise Ouch(result[0])
@@ -945,9 +937,8 @@ def main() -> int:
     if os.environ.get("DEBUG") or os.environ.get("GITLAB_CI"):
         # You're welcome.
         logging.basicConfig(level=logging.DEBUG)
-    else:
-        if os.environ.get("V"):
-            logging.basicConfig(level=logging.INFO)
+    elif os.environ.get("V"):
+        logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser(
         prog="mkvenv",
@@ -985,7 +976,7 @@ def main() -> int:
         logger.debug("mkvenv.py %s: exiting", args.command)
     except Ouch as exc:
         print("\n*** Ouch! ***\n", file=sys.stderr)
-        print(str(exc), "\n\n", file=sys.stderr)
+        print(exc, "\n\n", file=sys.stderr)
         return 1
     except SystemExit:
         raise

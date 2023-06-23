@@ -65,7 +65,7 @@ class TypeIdentifiers(NamedTuple):
 
     def __str__(self) -> str:
         values = ((f, getattr(self, f)) for f in self._fields)
-        s = ', '.join('%s=%s' % (f,v) for f,v in values if v is not None)
+        s = ', '.join(f'{f}={v}' for f,v in values if v is not None)
         return f'{s}'
 
     def check_consistency(self) -> List[str]:
@@ -82,14 +82,16 @@ class TypeIdentifiers(NamedTuple):
         if (self.instancetype is not None
             and self.classtype is not None
             and self.classtype != f'{self.instancetype}Class'):
-                r.append("class typedef %s doesn't match instance typedef %s" %
-                         (self.classtype, self.instancetype))
+            r.append(
+                f"class typedef {self.classtype} doesn't match instance typedef {self.instancetype}"
+            )
 
         if (self.uppercase is not None
             and self.typename is not None
             and f'TYPE_{self.uppercase}' != self.typename):
-            r.append("uppercase name (%s) doesn't match type name (%s)" %
-                     (self.uppercase, self.typename))
+            r.append(
+                f"uppercase name ({self.uppercase}) doesn't match type name ({self.typename})"
+            )
 
         return r
 
@@ -219,10 +221,7 @@ def typedefs(file: FileInfo) -> Iterable[TypedefMatch]:
 def find_typedef(f: FileInfo, name: Optional[str]) -> Optional[TypedefMatch]:
     if not name:
         return None
-    for td in typedefs(f):
-        if td.name == name:
-            return td
-    return None
+    return next((td for td in typedefs(f) if td.name == name), None)
 
 CHECKER_MACROS = ['OBJECT_CHECK', 'OBJECT_CLASS_CHECK', 'OBJECT_GET_CLASS']
 CheckerMacroName = Literal['OBJECT_CHECK', 'OBJECT_CLASS_CHECK', 'OBJECT_GET_CLASS']
@@ -418,9 +417,9 @@ class TypeCheckMacro(FileMatch):
                     self.info("typedef %s found in typedefs.h", t)
                     continue
 
-                issues.append("couldn't find typedef %s" % (t))
+                issues.append(f"couldn't find typedef {t}")
             elif td.start() > self.start():
-                issues.append("typedef %s need to be moved earlier in the file" % (td.name))
+                issues.append(f"typedef {td.name} need to be moved earlier in the file")
 
         for issue in issues:
             self.warn(issue)
@@ -590,16 +589,21 @@ class TypeDeclarationFixup(FileMatch):
         self.debug("checker_dict: %r", checker_dict)
         for uppercase,checkers in checker_dict.items():
             fields = ('instancetype', 'classtype', 'uppercase', 'typename')
-            fvalues = dict((field, set(getattr(m, field) for m in checkers
-                                       if getattr(m, field, None) is not None))
-                            for field in fields)
+            fvalues = {
+                field: {
+                    getattr(m, field)
+                    for m in checkers
+                    if getattr(m, field, None) is not None
+                }
+                for field in fields
+            }
             for field,values in fvalues.items():
                 if len(values) > 1:
                     for c in checkers:
                         c.warn("%s mismatch (%s)", field, ' '.join(values))
                     return
 
-            field_dict = dict((f, v.pop() if v else None) for f,v in fvalues.items())
+            field_dict = {f: v.pop() if v else None for f,v in fvalues.items()}
             yield from self.gen_patches_for_type(uppercase, checkers, field_dict)
 
     def find_conflicts(self, uppercase: str, checkers: List[TypeDeclaration]) -> bool:
@@ -612,14 +616,26 @@ class TypeDeclarationFixup(FileMatch):
                                  self.file.find_matches(DeclareInstanceType, uppercase, 'uppercase')))
 
         # conflicts in another file:
-        conflicting.extend(o for o in chain(self.allfiles.find_matches(DeclareInstanceChecker, uppercase, 'uppercase'),
-                                            self.allfiles.find_matches(DeclareClassCheckers, uppercase, 'uppercase'),
-                                            self.allfiles.find_matches(DeclareInterfaceChecker, uppercase, 'uppercase'),
-                                            self.allfiles.find_matches(DefineDirective, uppercase))
-                           if o is not None and o.file != self.file
-                               # if both are .c files, there's no conflict at all:
-                               and not (o.file.filename.suffix == '.c' and
-                                       self.file.filename.suffix == '.c'))
+        conflicting.extend(
+            o
+            for o in chain(
+                self.allfiles.find_matches(
+                    DeclareInstanceChecker, uppercase, 'uppercase'
+                ),
+                self.allfiles.find_matches(
+                    DeclareClassCheckers, uppercase, 'uppercase'
+                ),
+                self.allfiles.find_matches(
+                    DeclareInterfaceChecker, uppercase, 'uppercase'
+                ),
+                self.allfiles.find_matches(DefineDirective, uppercase),
+            )
+            if o is not None
+            and o.file != self.file
+            and (
+                o.file.filename.suffix != '.c' or self.file.filename.suffix != '.c'
+            )
+        )
 
         if conflicting:
             for c in checkers:
@@ -637,7 +653,6 @@ class TypeDeclarationFixup(FileMatch):
                              fields: Dict[str, Optional[str]]) -> Iterable[Patch]:
         """Should be reimplemented by subclasses"""
         return
-        yield
 
 class DeclareVoidTypes(TypeDeclarationFixup):
     """Add DECLARE_*_TYPE(..., void) when there's no declared type"""
@@ -711,8 +726,9 @@ class ObjectDeclareType(TypeCheckerDeclaration):
 
     def gen_patches(self):
         DBG("groups: %r", self.match.groupdict())
-        trivial_struct = self.file.find_match(TrivialClassStruct, self.group('classtype'))
-        if trivial_struct:
+        if trivial_struct := self.file.find_match(
+            TrivialClassStruct, self.group('classtype')
+        ):
             d = self.match.groupdict().copy()
             d['parent_struct'] = trivial_struct.group("parent_struct")
             yield trivial_struct.make_removal_patch()
@@ -744,12 +760,11 @@ class OldStyleObjectDeclareSimpleType(TypeCheckerDeclaration):
 
 def find_typename_uppercase(files: FileList, typename: str) -> Optional[str]:
     """Try to find what's the right MODULE_OBJ_NAME for a given type name"""
-    decl = files.find_match(DeclareTypeName, name=typename, group='typename')
-    if decl:
+    if decl := files.find_match(
+        DeclareTypeName, name=typename, group='typename'
+    ):
         return decl.group('uppercase')
-    if typename.startswith('TYPE_'):
-        return typename[len('TYPE_'):]
-    return None
+    return typename[len('TYPE_'):] if typename.startswith('TYPE_') else None
 
 def find_type_checkers(files:FileList, name:str, group:str='uppercase') -> Iterable[TypeCheckerDeclaration]:
     """Find usage of DECLARE*CHECKER macro"""
@@ -839,13 +854,12 @@ class MoveSymbols(FileMatch):
                 continue
 
             DBG("%r needs to be moved", definition)
-            if isinstance(definition, SimpleTypedefMatch) \
-               or isinstance(definition, ConstantDefine):
+            if isinstance(definition, (SimpleTypedefMatch, ConstantDefine)):
                 # simple typedef or define can be moved directly:
                 yield definition.make_removal_patch()
                 yield earliest.prepend(definition.group(0))
             elif isinstance(definition, FullStructTypedefMatch) \
-                 and definition.group('structname'):
+                     and definition.group('structname'):
                 # full struct typedef is more complex: we need to remove
                 # the typedef
                 yield from definition.move_typedef(earliest.start())

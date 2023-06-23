@@ -38,7 +38,7 @@ class AST1030Machine(QemuSystemTest):
         tar_hash = '4c6a8ce3a8ba76ef1a65dae419ae3409343c4b20'
         tar_path = self.fetch_asset(tar_url, asset_hash=tar_hash)
         archive.extract(tar_path, self.workdir)
-        kernel_file = self.workdir + "/ast1030-evb-demo/zephyr.elf"
+        kernel_file = f"{self.workdir}/ast1030-evb-demo/zephyr.elf"
         self.vm.set_console()
         self.vm.add_args('-kernel', kernel_file,
                          '-nographic')
@@ -58,7 +58,7 @@ class AST1030Machine(QemuSystemTest):
         tar_hash = '40ac87eabdcd3b3454ce5aad11fedc72a33ecda2'
         tar_path = self.fetch_asset(tar_url, asset_hash=tar_hash)
         archive.extract(tar_path, self.workdir)
-        kernel_file = self.workdir + "/ast1030-evb-demo/zephyr.bin"
+        kernel_file = f"{self.workdir}/ast1030-evb-demo/zephyr.bin"
         self.vm.set_console()
         self.vm.add_args('-kernel', kernel_file,
                          '-nographic')
@@ -96,8 +96,7 @@ class AST2x00Machine(QemuSystemTest):
 
     def do_test_arm_aspeed(self, image):
         self.vm.set_console()
-        self.vm.add_args('-drive', 'file=' + image + ',if=mtd,format=raw',
-                         '-net', 'nic')
+        self.vm.add_args('-drive', f'file={image},if=mtd,format=raw', '-net', 'nic')
         self.vm.launch()
 
         self.wait_for_console_pattern("U-Boot 2016.07")
@@ -141,14 +140,20 @@ class AST2x00Machine(QemuSystemTest):
         self.require_netdev('user')
 
         self.vm.set_console()
-        self.vm.add_args('-drive', 'file=' + image + ',if=mtd,format=raw',
-                         '-net', 'nic', '-net', 'user')
+        self.vm.add_args(
+            '-drive',
+            f'file={image},if=mtd,format=raw',
+            '-net',
+            'nic',
+            '-net',
+            'user',
+        )
         self.vm.launch()
 
         self.wait_for_console_pattern('U-Boot 2019.04')
         self.wait_for_console_pattern('## Loading kernel from FIT Image')
         self.wait_for_console_pattern('Starting kernel ...')
-        self.wait_for_console_pattern('Booting Linux on physical CPU ' + cpu_id)
+        self.wait_for_console_pattern(f'Booting Linux on physical CPU {cpu_id}')
         self.wait_for_console_pattern('lease of 10.0.2.15')
         # the line before login:
         self.wait_for_console_pattern(pattern)
@@ -295,8 +300,14 @@ class AST2x00MachineSDK(QemuSystemTest, LinuxSSHMixIn):
     def do_test_arm_aspeed_sdk_start(self, image):
         self.require_netdev('user')
         self.vm.set_console()
-        self.vm.add_args('-drive', 'file=' + image + ',if=mtd,format=raw',
-                         '-net', 'nic', '-net', 'user,hostfwd=:127.0.0.1:0-:22')
+        self.vm.add_args(
+            '-drive',
+            f'file={image},if=mtd,format=raw',
+            '-net',
+            'nic',
+            '-net',
+            'user,hostfwd=:127.0.0.1:0-:22',
+        )
         self.vm.launch()
 
         self.wait_for_console_pattern('U-Boot 2019.04')
@@ -322,8 +333,7 @@ class AST2x00MachineSDK(QemuSystemTest, LinuxSSHMixIn):
                                       algorithm='sha256')
         archive.extract(image_path, self.workdir)
 
-        self.do_test_arm_aspeed_sdk_start(
-            self.workdir + '/ast2500-default/image-bmc')
+        self.do_test_arm_aspeed_sdk_start(f'{self.workdir}/ast2500-default/image-bmc')
         self.wait_for_console_pattern('nodistro.0 ast2500-default ttyS4')
 
     @skipIf(os.getenv('GITLAB_CI'), 'Running on GitLab')
@@ -344,8 +354,7 @@ class AST2x00MachineSDK(QemuSystemTest, LinuxSSHMixIn):
                          'tmp105,bus=aspeed.i2c.bus.5,address=0x4d,id=tmp-test');
         self.vm.add_args('-device',
                          'ds1338,bus=aspeed.i2c.bus.5,address=0x32');
-        self.do_test_arm_aspeed_sdk_start(
-            self.workdir + '/ast2600-default/image-bmc')
+        self.do_test_arm_aspeed_sdk_start(f'{self.workdir}/ast2600-default/image-bmc')
         self.wait_for_console_pattern('nodistro.0 ast2600-default ttyS4')
 
         self.ssh_connect('root', '0penBmc', False)

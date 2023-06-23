@@ -41,7 +41,7 @@ from .source import QAPISourceInfo
 
 
 def gen_visit_decl(name: str, scalar: bool = False) -> str:
-    c_type = c_name(name) + ' *'
+    c_type = f'{c_name(name)} *'
     if not scalar:
         c_type += '*'
     return mcgen('''
@@ -94,9 +94,9 @@ bool visit_type_%(c_name)s_members(Visitor *v, %(c_name)s *obj, Error **errp)
     for memb in members:
         ret += memb.ifcond.gen_if()
         if memb.optional:
-            has = 'has_' + c_name(memb.name)
+            has = f'has_{c_name(memb.name)}'
             if memb.need_has():
-                has = 'obj->' + has
+                has = f'obj->{has}'
             ret += mcgen('''
     if (visit_optional(v, "%(name)s", &%(has)s)) {
 ''',

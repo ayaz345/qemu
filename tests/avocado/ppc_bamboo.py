@@ -24,17 +24,22 @@ class BambooMachine(QemuSystemTest):
         """
         self.require_accelerator("tcg")
         self.require_netdev('user')
-        tar_url = ('http://landley.net/aboriginal/downloads/binaries/'
-                   'system-image-powerpc-440fp.tar.gz')
         tar_hash = '53e5f16414b195b82d2c70272f81c2eedb39bad9'
+        tar_url = (
+            'http://landley.net/aboriginal/downloads/binaries/'
+            'system-image-powerpc-440fp.tar.gz'
+        )
         file_path = self.fetch_asset(tar_url, asset_hash=tar_hash)
         archive.extract(file_path, self.workdir)
         self.vm.set_console()
-        self.vm.add_args('-kernel', self.workdir +
-                                   '/system-image-powerpc-440fp/linux',
-                         '-initrd', self.workdir +
-                                   '/system-image-powerpc-440fp/rootfs.cpio.gz',
-                         '-nic', 'user,model=rtl8139,restrict=on')
+        self.vm.add_args(
+            '-kernel',
+            f'{self.workdir}/system-image-powerpc-440fp/linux',
+            '-initrd',
+            f'{self.workdir}/system-image-powerpc-440fp/rootfs.cpio.gz',
+            '-nic',
+            'user,model=rtl8139,restrict=on',
+        )
         self.vm.launch()
         wait_for_console_pattern(self, 'Type exit when done')
         exec_command_and_wait_for_pattern(self, 'ping 10.0.2.2',

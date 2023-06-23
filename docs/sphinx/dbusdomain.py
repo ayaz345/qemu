@@ -58,8 +58,7 @@ class DBusDescription(ObjectDescription[str]):
         signode["ids"].append(node_id)
 
         if "noindexentry" not in self.options:
-            indextext = self.get_index_text(ifacename, name)
-            if indextext:
+            if indextext := self.get_index_text(ifacename, name):
                 self.indexnode["entries"].append(
                     ("single", indextext, node_id, "", None)
                 )
@@ -90,8 +89,8 @@ class DBusInterface(DBusDescription):
     def run(self) -> List[Node]:
         _, node = super().run()
         name = self.arguments[0]
-        section = nodes.section(ids=[name + "-section"])
-        section += nodes.title(name, "%s interface" % name)
+        section = nodes.section(ids=[f"{name}-section"])
+        section += nodes.title(name, f"{name} interface")
         section += node
         return [self.indexnode, section]
 
@@ -223,8 +222,7 @@ class DBusProperty(DBusMember):
             fieldbody = nodes.field_body("", nodes.paragraph("", "", content))
             field = nodes.field("", fieldname, fieldbody)
             fieldlist += field
-        emits = self.options.get("emits-changed", None)
-        if emits:
+        if emits := self.options.get("emits-changed", None):
             content = nodes.Text(emits)
             fieldname = nodes.field_name("", _("Emits Changed"))
             fieldbody = nodes.field_body("", nodes.paragraph("", "", content))
@@ -257,14 +255,14 @@ class DBusXRef(XRefRole):
             target = target.lstrip("~")  # only has a meaning for the title
             # if the first character is a tilde, don't display the module/class
             # parts of the contents
-            if title[0:1] == "~":
+            if title[:1] == "~":
                 title = title[1:]
                 dot = title.rfind(".")
                 if dot != -1:
                     title = title[dot + 1 :]
         # if the first character is a dot, search more specific namespaces first
         # else search builtins first
-        if target[0:1] == ".":
+        if target[:1] == ".":
             target = target[1:]
             refnode["refspecific"] = True
         return title, target
@@ -370,9 +368,8 @@ class DBusDomain(Domain):
 
     def find_obj(self, typ: str, name: str) -> Optional[Tuple[str, ObjectEntry]]:
         # skip parens
-        if name[-2:] == "()":
-            name = name[:-2]
-        if typ in ("meth", "sig", "prop"):
+        name = name.removesuffix("()")
+        if typ in {"meth", "sig", "prop"}:
             try:
                 ifacename, name = name.rsplit(".", 1)
             except ValueError:
@@ -390,8 +387,7 @@ class DBusDomain(Domain):
         contnode: Element,
     ) -> Optional[Element]:
         """Resolve the pending_xref *node* with the given *typ* and *target*."""
-        objdef = self.find_obj(typ, target)
-        if objdef:
+        if objdef := self.find_obj(typ, target):
             return node_utils.make_refnode(
                 builder, fromdocname, objdef.docname, objdef.node_id, contnode
             )

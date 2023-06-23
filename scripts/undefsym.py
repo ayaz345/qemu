@@ -21,7 +21,7 @@ def filter_lines_set(stdout, from_staticlib):
             if not from_staticlib and tokens[1] != b'U':
                 continue
             new_line = b'-Wl,-u,' + tokens[0]
-            if not new_line in linesSet:
+            if new_line not in linesSet:
                 linesSet.add(new_line)
     return linesSet
 

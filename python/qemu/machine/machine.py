@@ -84,11 +84,7 @@ class VMLaunchFailure(QEMUMachineError):
         ret = ''
         if self.__cause__ is not None:
             name = type(self.__cause__).__name__
-            reason = str(self.__cause__)
-            if reason:
-                ret += f"{name}: {reason}"
-            else:
-                ret += f"{name}"
+            ret += f"{name}: {reason}" if (reason := str(self.__cause__)) else f"{name}"
         ret += '\n'
 
         if self.exitcode is not None:
@@ -167,12 +163,7 @@ class QEMUMachine:
         self._monitor_address = monitor_address
 
         self._console_log_path = console_log
-        if self._console_log_path:
-            # In order to log the console, buffering needs to be enabled.
-            self._drain_console = True
-        else:
-            self._drain_console = drain_console
-
+        self._drain_console = True if self._console_log_path else drain_console
         # Runstate
         self._qemu_log_path: Optional[str] = None
         self._qemu_log_file: Optional[BinaryIO] = None
@@ -216,9 +207,7 @@ class QEMUMachine:
         """
         Pass a file descriptor to the VM
         """
-        options = ['fd=%d' % fd,
-                   'set=%d' % fdset,
-                   'opaque=%s' % opaque]
+        options = ['fd=%d' % fd, 'set=%d' % fdset, f'opaque={opaque}']
         if opts:
             options.append(opts)
 
@@ -275,15 +264,11 @@ class QEMUMachine:
 
     def exitcode(self) -> Optional[int]:
         """Returns the exit code if possible, or None."""
-        if self._popen is None:
-            return None
-        return self._popen.poll()
+        return None if self._popen is None else self._popen.poll()
 
     def get_pid(self) -> Optional[int]:
         """Returns the PID of the running process, or None."""
-        if not self.is_running():
-            return None
-        return self._subp.pid
+        return None if not self.is_running() else self._subp.pid
 
     def _load_io_log(self) -> None:
         # Assume that the output encoding of QEMU's terminal output is
@@ -317,13 +302,12 @@ class QEMUMachine:
         for _ in range(self._console_index):
             args.extend(['-serial', 'null'])
         if self._console_set:
-            chardev = ('socket,id=console,path=%s,server=on,wait=off' %
-                       self._console_address)
+            chardev = f'socket,id=console,path={self._console_address},server=on,wait=off'
             args.extend(['-chardev', chardev])
             if self._console_device_type is None:
                 args.extend(['-serial', 'chardev:console'])
             else:
-                device = '%s,chardev=console' % self._console_device_type
+                device = f'{self._console_device_type},chardev=console'
                 args.extend(['-device', device])
         return args
 
@@ -355,7 +339,7 @@ class QEMUMachine:
         # NOTE: Make sure any opened resources are *definitely* freed in
         # _post_shutdown()!
         # pylint: disable=consider-using-with
-        self._qemu_log_path = os.path.join(self.log_dir, self._name + ".log")
+        self._qemu_log_path = os.path.join(self.log_dir, f"{self._name}.log")
         self._qemu_log_file = open(self._qemu_log_path, 'wb')
 
         self._iolog = None
@@ -413,10 +397,7 @@ class QEMUMachine:
         if (exitcode is not None and exitcode < 0
                 and not (self._user_killed and exitcode == -signal.SIGKILL)):
             msg = 'qemu received signal %i; command: "%s"'
-            if self._qemu_full_args:
-                command = ' '.join(self._qemu_full_args)
-            else:
-                command = ''
+            command = ' '.join(self._qemu_full_args) if self._qemu_full_args else ''
             LOG.warning(msg, -int(exitcode), command)
 
         self._quit_issued = False
@@ -664,10 +645,7 @@ class QEMUMachine:
     @classmethod
     def _qmp_args(cls, conv_keys: bool,
                   args: Dict[str, Any]) -> Dict[str, object]:
-        if conv_keys:
-            return {k.replace('_', '-'): v for k, v in args.items()}
-
-        return args
+        return {k.replace('_', '-'): v for k, v in args.items()} if conv_keys else args
 
     def qmp(self, cmd: str,
             args_dict: Optional[Dict[str, object]] = None,
@@ -709,9 +687,7 @@ class QEMUMachine:
         """
         Poll for one queued QMP events and return it
         """
-        if self._events:
-            return self._events.pop(0)
-        return self._qmp.pull_event(wait=wait)
+        return self._events.pop(0) if self._events else self._qmp.pull_event(wait=wait)
 
     def get_qmp_events(self, wait: bool = False) -> List[QMPMessage]:
         """
@@ -745,15 +721,14 @@ class QEMUMachine:
 
         try:
             for key in match:
-                if key in event:
-                    if not QEMUMachine.event_match(event[key], match[key]):
-                        return False
-                else:
+                if key not in event:
+                    return False
+                if not QEMUMachine.event_match(event[key], match[key]):
                     return False
             return True
         except TypeError:
             # either match or event wasn't iterable (not a dict)
-            return bool(match == event)
+            return match == event
 
     def event_wait(self, name: str,
                    timeout: float = 60.0,
@@ -895,15 +870,11 @@ class QEMUMachine:
         """
         Returns the directory used for sockfiles by this machine.
         """
-        if self._sock_dir:
-            return self._sock_dir
-        return self.temp_dir
+        return self._sock_dir if self._sock_dir else self.temp_dir
 
     @property
     def log_dir(self) -> str:
         """
         Returns a directory to be used for writing logs
         """
-        if self._log_dir is None:
-            return self.temp_dir
-        return self._log_dir
+        return self.temp_dir if self._log_dir is None else self._log_dir

@@ -116,24 +116,12 @@ def analyze_opn_old(f, tag, regtype, regid, regno):
         else:
             hex_common.bad_register(regtype, regid)
     elif regtype == "G":
-        if regid in {"dd"}:
-            f.write(f"//    const int {regN} = insn->regno[{regno}];\n")
-        elif regid in {"d"}:
-            f.write(f"//    const int {regN} = insn->regno[{regno}];\n")
-        elif regid in {"ss"}:
-            f.write(f"//    const int {regN} = insn->regno[{regno}];\n")
-        elif regid in {"s"}:
+        if regid in {"dd", "d", "ss", "s"}:
             f.write(f"//    const int {regN} = insn->regno[{regno}];\n")
         else:
             hex_common.bad_register(regtype, regid)
     elif regtype == "S":
-        if regid in {"dd"}:
-            f.write(f"//    const int {regN} = insn->regno[{regno}];\n")
-        elif regid in {"d"}:
-            f.write(f"//    const int {regN} = insn->regno[{regno}];\n")
-        elif regid in {"ss"}:
-            f.write(f"//    const int {regN} = insn->regno[{regno}];\n")
-        elif regid in {"s"}:
+        if regid in {"dd", "d", "ss", "s"}:
             f.write(f"//    const int {regN} = insn->regno[{regno}];\n")
         else:
             hex_common.bad_register(regtype, regid)
@@ -200,12 +188,9 @@ def gen_analyze_func(f, tag, regs, imms):
 
     f.write("    Insn *insn G_GNUC_UNUSED = ctx->insn;\n")
 
-    i = 0
     ## Analyze all the registers
-    for regtype, regid in regs:
+    for i, (regtype, regid) in enumerate(regs):
         analyze_opn(f, tag, regtype, regid, i)
-        i += 1
-
     has_generated_helper = not hex_common.skip_qemu_helper(
         tag
     ) and not hex_common.is_idef_parser_enabled(tag)

@@ -28,10 +28,7 @@ import tempfile
 
 def main() -> int:
     """Run the vendoring utility. See module-level docstring."""
-    loud = False
-    if os.environ.get("DEBUG") or os.environ.get("V"):
-        loud = True
-
+    loud = bool(os.environ.get("DEBUG") or os.environ.get("V"))
     # No options or anything for now, but I guess
     # you'll figure that out when you run --help.
     parser = argparse.ArgumentParser(

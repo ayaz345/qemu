@@ -162,8 +162,8 @@ class RamSection(object):
                     self.sizeinfo[self.name] = '0x%016x' % len
                     if self.write_memory:
                         print(self.name)
-                        mkdir_p('./' + os.path.dirname(self.name))
-                        f = open('./' + self.name, "wb")
+                        mkdir_p(f'./{os.path.dirname(self.name)}')
+                        f = open(f'./{self.name}', "wb")
                         f.truncate(0)
                         f.truncate(len)
                         self.files[self.name] = f
@@ -340,10 +340,7 @@ class VMSDFieldBool(VMSDFieldGeneric):
 
     def read(self):
         super(VMSDFieldBool, self).read()
-        if self.data[0] == 0:
-            self.data = False
-        else:
-            self.data = True
+        self.data = self.data[0] != 0
         return self.data
 
 class VMSDFieldStruct(VMSDFieldGeneric):
@@ -356,7 +353,7 @@ class VMSDFieldStruct(VMSDFieldGeneric):
         # When we see compressed array elements, unfold them here
         new_fields = []
         for field in self.desc['struct']['fields']:
-            if not 'array_len' in field:
+            if 'array_len' not in field:
                 new_fields.append(field)
                 continue
             array_len = field.pop('array_len')
@@ -422,10 +419,7 @@ class VMSDFieldStruct(VMSDFieldGeneric):
                    return value
 
     def getDictArray(self, array):
-        r = []
-        for value in array:
-           r.append(self.getDictItem(value))
-        return r
+        return [self.getDictItem(value) for value in array]
 
     def getDictOrderedDict(self, dict):
         r = collections.OrderedDict()
@@ -517,10 +511,11 @@ class MigrationDump(object):
         if desc_only:
             return
 
-        ramargs = {}
-        ramargs['page_size'] = self.vmsd_desc['page_size']
-        ramargs['dump_memory'] = dump_memory
-        ramargs['write_memory'] = write_memory
+        ramargs = {
+            'page_size': self.vmsd_desc['page_size'],
+            'dump_memory': dump_memory,
+            'write_memory': write_memory,
+        }
         self.section_classes[('ram',0)][1] = ramargs
 
         while True:
@@ -530,7 +525,10 @@ class MigrationDump(object):
             elif section_type == self.QEMU_VM_CONFIGURATION:
                 section = ConfigurationSection(file)
                 section.read()
-            elif section_type == self.QEMU_VM_SECTION_START or section_type == self.QEMU_VM_SECTION_FULL:
+            elif section_type in [
+                self.QEMU_VM_SECTION_START,
+                self.QEMU_VM_SECTION_FULL,
+            ]:
                 section_id = file.read32()
                 name = file.readstr()
                 instance_id = file.read32()
@@ -540,7 +538,10 @@ class MigrationDump(object):
                 section = classdesc[0](file, version_id, classdesc[1], section_key)
                 self.sections[section_id] = section
                 section.read()
-            elif section_type == self.QEMU_VM_SECTION_PART or section_type == self.QEMU_VM_SECTION_END:
+            elif section_type in [
+                self.QEMU_VM_SECTION_PART,
+                self.QEMU_VM_SECTION_END,
+            ]:
                 section_id = file.read32()
                 self.sections[section_id].read()
             elif section_type == self.QEMU_VM_SECTION_FOOTER:
@@ -588,18 +589,15 @@ if args.extract:
 
     dump.read(desc_only = True)
     print("desc.json")
-    f = open("desc.json", "w")
-    f.truncate()
-    f.write(jsonenc.encode(dump.vmsd_desc))
-    f.close()
-
+    with open("desc.json", "w") as f:
+        f.truncate()
+        f.write(jsonenc.encode(dump.vmsd_desc))
     dump.read(write_memory = True)
     dict = dump.getDict()
     print("state.json")
-    f = open("state.json", "w")
-    f.truncate()
-    f.write(jsonenc.encode(dict))
-    f.close()
+    with open("state.json", "w") as f:
+        f.truncate()
+        f.write(jsonenc.encode(dict))
 elif args.dump == "state":
     dump = MigrationDump(args.file)
     dump.read(dump_memory = args.memory)

@@ -11,13 +11,10 @@ import os.path
 import sys
 import subprocess
 
-namespace = "qemu-project"
-if len(sys.argv) >= 2:
-    namespace = sys.argv[1]
-
+namespace = sys.argv[1] if len(sys.argv) >= 2 else "qemu-project"
 cwd = os.getcwd()
 reponame = os.path.basename(cwd)
-repourl = "https://gitlab.com/%s/%s.git" % (namespace, reponame)
+repourl = f"https://gitlab.com/{namespace}/{reponame}.git"
 
 subprocess.check_call(["git", "remote", "add", "check-dco", repourl])
 subprocess.check_call(["git", "fetch", "check-dco", "master"],
@@ -37,14 +34,14 @@ errors = False
 print("\nChecking for 'Signed-off-by: NAME <EMAIL>' " +
       "on all commits since %s...\n" % ancestor)
 
-log = subprocess.check_output(["git", "log", "--format=%H %s",
-                               ancestor + "..."],
-                              universal_newlines=True)
+log = subprocess.check_output(
+    ["git", "log", "--format=%H %s", f"{ancestor}..."], universal_newlines=True
+)
 
 if log == "":
     commits = []
 else:
-    commits = [[c[0:40], c[41:]] for c in log.strip().split("\n")]
+    commits = [[c[:40], c[41:]] for c in log.strip().split("\n")]
 
 for sha, subject in commits:
 
@@ -52,13 +49,13 @@ for sha, subject in commits:
                                   universal_newlines=True)
     lines = msg.strip().split("\n")
 
-    print("🔍 %s %s" % (sha, subject))
+    print(f"🔍 {sha} {subject}")
     sob = False
     for line in lines:
         if "Signed-off-by:" in line:
             sob = True
             if "localhost" in line:
-                print("    ❌ FAIL: bad email in %s" % line)
+                print(f"    ❌ FAIL: bad email in {line}")
                 errors = True
 
     if not sob:

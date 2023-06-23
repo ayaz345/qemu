@@ -94,22 +94,21 @@ def bench_write_req(qemu_img, image_name, block_size, block_offset,
         qemu_img_pipe(*args_create)
     except OSError as e:
         os.remove(image_name)
-        return {'error': 'qemu_img create failed: ' + str(e)}
+        return {'error': f'qemu_img create failed: {str(e)}'}
 
     try:
         ret = qemu_img_pipe(*args_bench)
     except OSError as e:
         os.remove(image_name)
-        return {'error': 'qemu_img bench failed: ' + str(e)}
+        return {'error': f'qemu_img bench failed: {str(e)}'}
 
     os.remove(image_name)
 
-    if 'seconds' in ret:
-        ret_list = ret.split()
-        index = ret_list.index('seconds.')
-        return {'seconds': float(ret_list[index-1])}
-    else:
-        return {'error': 'qemu_img bench failed: ' + ret}
+    if 'seconds' not in ret:
+        return {'error': f'qemu_img bench failed: {ret}'}
+    ret_list = ret.split()
+    index = ret_list.index('seconds.')
+    return {'seconds': float(ret_list[index-1])}
 
 
 if __name__ == '__main__':

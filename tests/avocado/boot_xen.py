@@ -31,10 +31,7 @@ class BootXenBase(LinuxKernelTest):
                       's/JSsewXGZ6mqxPr5/download?path=%2F&files='
                       'linux-5.9.9-arm64-ajb')
         kernel_sha1 = '4f92bc4b9f88d5ab792fa7a43a68555d344e1b83'
-        kernel_path = self.fetch_asset(kernel_url,
-                                       asset_hash=kernel_sha1)
-
-        return kernel_path
+        return self.fetch_asset(kernel_url, asset_hash=kernel_sha1)
 
     def launch_xen(self, xen_path):
         """
@@ -46,13 +43,18 @@ class BootXenBase(LinuxKernelTest):
         self.vm.set_console()
 
         xen_command_line = self.XEN_COMMON_COMMAND_LINE
-        self.vm.add_args('-machine', 'virtualization=on',
-                         '-m', '768',
-                         '-kernel', xen_path,
-                         '-append', xen_command_line,
-                         '-device',
-                         'guest-loader,addr=0x47000000,kernel=%s,bootargs=console=hvc0'
-                         % (kernel_path))
+        self.vm.add_args(
+            '-machine',
+            'virtualization=on',
+            '-m',
+            '768',
+            '-kernel',
+            xen_path,
+            '-append',
+            xen_command_line,
+            '-device',
+            f'guest-loader,addr=0x47000000,kernel={kernel_path},bootargs=console=hvc0',
+        )
 
         self.vm.launch()
 

@@ -63,10 +63,10 @@ class VirtioMaxSegSettingsCheck(QemuSystemTest):
             not_found = props_list.difference(res)
             not_found = ', '.join(not_found)
             error = '({0}): The following properties not found: {1}'\
-                     .format(dev_type_name, not_found)
+                         .format(dev_type_name, not_found)
         else:
             query_ok = True
-            props = dict()
+            props = {}
             for prop in res:
                 p = prop.split(' = ')
                 props[p[0]] = p[1]
@@ -112,9 +112,7 @@ class VirtioMaxSegSettingsCheck(QemuSystemTest):
         # versions >= 5.0 goes with seg_max_adjust enabled
         major = int(ver[0])
 
-        if major >= 5:
-            return True
-        return False
+        return major >= 5
 
     @skip("break multi-arch CI")
     def test_machine_types(self):
@@ -129,12 +127,9 @@ class VirtioMaxSegSettingsCheck(QemuSystemTest):
 
         for dev_type in DEV_TYPES:
             # create the list of machine types and their parameters.
-            mtypes = list()
+            mtypes = []
             for m in machines:
-                if self.seg_max_adjust_enabled(m):
-                    enabled = 'true'
-                else:
-                    enabled = 'false'
+                enabled = 'true' if self.seg_max_adjust_enabled(m) else 'false'
                 mtypes.append({'name': m,
                                DEV_TYPES[dev_type]['seg_max_adjust']: enabled})
 

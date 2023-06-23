@@ -36,7 +36,7 @@ def which(binary):
         if os.path.exists(os.path.join(path, binary)):
                 return os.path.join(path, binary)
 
-    print("Unable to find '%s' in $PATH" % binary)
+    print(f"Unable to find '{binary}' in $PATH")
     sys.exit(1)
 
 
@@ -47,7 +47,7 @@ def tapset_dir(binary):
     else:
         thisfile = os.path.realpath(binary)
         if not os.path.exists(thisfile):
-            print("Unable to find '%s'" % thisfile)
+            print(f"Unable to find '{thisfile}'")
             sys.exit(1)
 
     basedir = os.path.split(thisfile)[0]
@@ -60,18 +60,16 @@ def cmd_run(args):
     tapsets = tapset_dir(args.binary)
 
     if args.verbose:
-        print("Using tapset dir '%s' for binary '%s'" % (tapsets, args.binary))
+        print(f"Using tapset dir '{tapsets}' for binary '{args.binary}'")
 
-    probes = []
-    for probe in args.probes:
-        probes.append("probe %s.%s {}" % (prefix, probe))
-    if len(probes) == 0:
+    probes = ["probe %s.%s {}" % (prefix, probe) for probe in args.probes]
+    if not probes:
         print("At least one probe pattern must be specified")
         sys.exit(1)
 
     script = " ".join(probes)
     if args.verbose:
-        print("Compiling script '%s'" % script)
+        print(f"Compiling script '{script}'")
         script = """probe begin { print("Running script, <Ctrl>-c to quit\\n") } """ + script
 
     # We request an 8MB buffer, since the stap default 1MB buffer
@@ -87,26 +85,28 @@ def cmd_list(args):
     tapsets = tapset_dir(args.binary)
 
     if args.verbose:
-        print("Using tapset dir '%s' for binary '%s'" % (tapsets, args.binary))
+        print(f"Using tapset dir '{tapsets}' for binary '{args.binary}'")
 
     def print_probes(verbose, name):
         prefix = probe_prefix(args.binary)
         offset = len(prefix) + 1
-        script = prefix + "." + name
+        script = f"{prefix}.{name}"
 
         if verbose:
-            print("Listing probes with name '%s'" % script)
+            print(f"Listing probes with name '{script}'")
         proc = subprocess.Popen(["stap", "-I", tapsets, "-l", script],
                                 stdout=subprocess.PIPE,
                                 universal_newlines=True)
         out, err = proc.communicate()
         if proc.returncode != 0:
-            print("No probes found, are the tapsets installed in %s" % tapset_dir(args.binary))
+            print(
+                f"No probes found, are the tapsets installed in {tapset_dir(args.binary)}"
+            )
             sys.exit(1)
 
         for line in out.splitlines():
             if line.startswith(prefix):
-                print("%s" % line[offset:])
+                print(f"{line[offset:]}")
 
     if len(args.probes) == 0:
         print_probes(args.verbose, "*")

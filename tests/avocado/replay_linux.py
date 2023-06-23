@@ -45,14 +45,12 @@ class ReplayLinux(LinuxTest):
         self.cloudinit_path = self.prepare_cloudinit(ssh_pubkey)
 
     def vm_add_disk(self, vm, path, id, device):
-        bus_string = ''
-        if self.bus:
-            bus_string = ',bus=%s.%d' % (self.bus, id,)
-        vm.add_args('-drive', 'file=%s,snapshot,id=disk%s,if=none' % (path, id))
-        vm.add_args('-drive',
-            'driver=blkreplay,id=disk%s-rr,if=none,image=disk%s' % (id, id))
-        vm.add_args('-device',
-            '%s,drive=disk%s-rr%s' % (device, id, bus_string))
+        bus_string = ',bus=%s.%d' % (self.bus, id,) if self.bus else ''
+        vm.add_args('-drive', f'file={path},snapshot,id=disk{id},if=none')
+        vm.add_args(
+            '-drive', f'driver=blkreplay,id=disk{id}-rr,if=none,image=disk{id}'
+        )
+        vm.add_args('-device', f'{device},drive=disk{id}-rr{bus_string}')
 
     def launch_and_wait(self, record, args, shift):
         self.require_netdev('user')
@@ -74,8 +72,7 @@ class ReplayLinux(LinuxTest):
             logger.info('replaying the execution...')
             mode = 'replay'
         replay_path = os.path.join(self.workdir, 'replay.bin')
-        vm.add_args('-icount', 'shift=%s,rr=%s,rrfile=%s' %
-                    (shift, mode, replay_path))
+        vm.add_args('-icount', f'shift={shift},rr={mode},rrfile={replay_path}')
 
         start_time = time.time()
 
@@ -89,8 +86,9 @@ class ReplayLinux(LinuxTest):
             while not self.phone_server.instance_phoned_back:
                 self.phone_server.handle_request()
             vm.shutdown()
-            logger.info('finished the recording with log size %s bytes'
-                % os.path.getsize(replay_path))
+            logger.info(
+                f'finished the recording with log size {os.path.getsize(replay_path)} bytes'
+            )
         else:
             vm.event_wait('SHUTDOWN', self.timeout)
             vm.shutdown(True)

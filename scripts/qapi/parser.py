@@ -153,9 +153,9 @@ class QAPISchemaParser:
                 incl_fname = os.path.join(os.path.dirname(self._fname),
                                           include)
                 self._add_expr(OrderedDict({'include': incl_fname}), info)
-                exprs_include = self._include(include, info, incl_fname,
-                                              self._included)
-                if exprs_include:
+                if exprs_include := self._include(
+                    include, info, incl_fname, self._included
+                ):
                     self.exprs.extend(exprs_include.exprs)
                     self.docs.extend(exprs_include.docs)
             elif "pragma" in expr:
@@ -168,10 +168,10 @@ class QAPISchemaParser:
                         info, "value of 'pragma' must be an object")
                 for name, value in pragma.items():
                     self._pragma(name, value, info)
+            elif cur_doc and not cur_doc.symbol:
+                raise QAPISemError(
+                    cur_doc.info, "definition documentation required")
             else:
-                if cur_doc and not cur_doc.symbol:
-                    raise QAPISemError(
-                        cur_doc.info, "definition documentation required")
                 self._add_expr(expr, info, cur_doc)
             cur_doc = None
         self.reject_expr_doc(cur_doc)
@@ -186,8 +186,8 @@ class QAPISchemaParser:
         if doc and doc.symbol:
             raise QAPISemError(
                 doc.info,
-                "documentation for '%s' is not followed by the definition"
-                % doc.symbol)
+                f"documentation for '{doc.symbol}' is not followed by the definition",
+            )
 
     @staticmethod
     def _include(include: str,
@@ -200,7 +200,7 @@ class QAPISchemaParser:
         inf: Optional[QAPISourceInfo] = info
         while inf:
             if incl_abs_fname == os.path.abspath(inf.fname):
-                raise QAPISemError(info, "inclusion loop for %s" % include)
+                raise QAPISemError(info, f"inclusion loop for {include}")
             inf = inf.parent
 
         # skip multiple include of the same file
@@ -221,9 +221,7 @@ class QAPISchemaParser:
         def check_list_str(name: str, value: object) -> List[str]:
             if (not isinstance(value, list) or
                     any(not isinstance(elt, str) for elt in value)):
-                raise QAPISemError(
-                    info,
-                    "pragma %s must be a list of strings" % name)
+                raise QAPISemError(info, f"pragma {name} must be a list of strings")
             return value
 
         pragma = info.pragma
@@ -240,7 +238,7 @@ class QAPISchemaParser:
         elif name == 'member-name-exceptions':
             pragma.member_name_exceptions = check_list_str(name, value)
         else:
-            raise QAPISemError(info, "unknown pragma '%s'" % name)
+            raise QAPISemError(info, f"unknown pragma '{name}'")
 
     def accept(self, skip_comment: bool = True) -> None:
         """
@@ -348,7 +346,7 @@ class QAPISchemaParser:
                 # character
                 match = must_match('[^[\\]{}:,\\s\']+',
                                    self.src[self.cursor-1:])
-                raise QAPIParseError(self, "stray '%s'" % match.group(0))
+                raise QAPIParseError(self, f"stray '{match.group(0)}'")
 
     def get_members(self) -> Dict[str, object]:
         expr: Dict[str, object] = OrderedDict()
@@ -366,7 +364,7 @@ class QAPISchemaParser:
                 raise QAPIParseError(self, "expected ':'")
             self.accept()
             if key in expr:
-                raise QAPIParseError(self, "duplicate key '%s'" % key)
+                raise QAPIParseError(self, f"duplicate key '{key}'")
             expr[key] = self.get_expr()
             if self.tok == '}':
                 self.accept()
@@ -533,10 +531,7 @@ class QAPIDoc:
 
     def has_section(self, name: str) -> bool:
         """Return True if we have a section with this name."""
-        for i in self.sections:
-            if i.name == name:
-                return True
-        return False
+        return any(i.name == name for i in self.sections)
 
     def append(self, line: str) -> None:
         """
@@ -623,8 +618,7 @@ class QAPIDoc:
         Else, append the line to the current section.
 
         """
-        match = self._match_at_name_colon(line)
-        if match:
+        if match := self._match_at_name_colon(line):
             line = line[match.end():]
             self._start_args_section(match.group(1))
         elif self._match_section_tag(line):
@@ -644,8 +638,7 @@ class QAPIDoc:
         self._append_freeform(line)
 
     def _append_features_line(self, line: str) -> None:
-        match = self._match_at_name_colon(line)
-        if match:
+        if match := self._match_at_name_colon(line):
             line = line[match.end():]
             self._start_features_section(match.group(1))
         elif self._match_section_tag(line):
@@ -672,13 +665,12 @@ class QAPIDoc:
 
         Else, append the line to the current section.
         """
-        match = self._match_at_name_colon(line)
-        if match:
-            raise QAPIParseError(self._parser,
-                                 "description of '@%s:' follows a section"
-                                 % match.group(1))
-        match = self._match_section_tag(line)
-        if match:
+        if match := self._match_at_name_colon(line):
+            raise QAPIParseError(
+                self._parser,
+                f"description of '@{match.group(1)}:' follows a section",
+            )
+        if match := self._match_section_tag(line):
             line = line[match.end():]
             self._start_section(match.group(1))
 
@@ -692,8 +684,7 @@ class QAPIDoc:
         if not name:
             raise QAPIParseError(self._parser, "invalid parameter name")
         if name in symbols_dict:
-            raise QAPIParseError(self._parser,
-                                 "'%s' parameter name duplicated" % name)
+            raise QAPIParseError(self._parser, f"'{name}' parameter name duplicated")
         assert not self.sections
         new_section = QAPIDoc.ArgSection(self._parser, name)
         self._switch_section(new_section)
@@ -707,8 +698,7 @@ class QAPIDoc:
 
     def _start_section(self, name: Optional[str] = None) -> None:
         if name in ('Returns', 'Since') and self.has_section(name):
-            raise QAPIParseError(self._parser,
-                                 "duplicated '%s' section" % name)
+            raise QAPIParseError(self._parser, f"duplicated '{name}' section")
         new_section = QAPIDoc.Section(self._parser, name)
         self._switch_section(new_section)
         self.sections.append(new_section)
@@ -722,18 +712,16 @@ class QAPIDoc:
             # We do not create anonymous sections unless there is
             # something to put in them; this is a parser bug.
             assert self._section.name
-            raise QAPIParseError(
-                self._parser,
-                "empty doc section '%s'" % self._section.name)
+            raise QAPIParseError(self._parser, f"empty doc section '{self._section.name}'")
 
         self._section = new_section
 
     def _append_freeform(self, line: str) -> None:
-        match = re.match(r'(@\S+:)', line)
-        if match:
-            raise QAPIParseError(self._parser,
-                                 "'%s' not allowed in free-form documentation"
-                                 % match.group(1))
+        if match := re.match(r'(@\S+:)', line):
+            raise QAPIParseError(
+                self._parser,
+                f"'{match[1]}' not allowed in free-form documentation",
+            )
         self._section.append(line)
 
     def connect_member(self, member: 'QAPISchemaMember') -> None:
@@ -745,9 +733,9 @@ class QAPIDoc:
 
     def connect_feature(self, feature: 'QAPISchemaFeature') -> None:
         if feature.name not in self.features:
-            raise QAPISemError(feature.info,
-                               "feature '%s' lacks documentation"
-                               % feature.name)
+            raise QAPISemError(
+                feature.info, f"feature '{feature.name}' lacks documentation"
+            )
         self.features[feature.name].connect(feature)
 
     def check_expr(self, expr: QAPIExpression) -> None:
@@ -758,19 +746,15 @@ class QAPIDoc:
     def check(self) -> None:
 
         def check_args_section(
-                args: Dict[str, QAPIDoc.ArgSection], what: str
-        ) -> None:
+                    args: Dict[str, QAPIDoc.ArgSection], what: str
+            ) -> None:
             bogus = [name for name, section in args.items()
                      if not section.member]
             if bogus:
                 raise QAPISemError(
                     self.info,
-                    "documented %s%s '%s' %s not exist" % (
-                        what,
-                        "s" if len(bogus) > 1 else "",
-                        "', '".join(bogus),
-                        "do" if len(bogus) > 1 else "does"
-                    ))
+                    f"""documented {what}{"s" if len(bogus) > 1 else ""} '{"', '".join(bogus)}' {"do" if len(bogus) > 1 else "does"} not exist""",
+                )
 
         check_args_section(self.args, 'member')
         check_args_section(self.features, 'feature')

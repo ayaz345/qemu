@@ -24,7 +24,7 @@ from time import sleep
 from sys import argv
 
 def usage():
-    print("USAGE: %s [interval [count]]" % argv[0])
+    print(f"USAGE: {argv[0]} [interval [count]]")
     exit()
 
 # define BPF program
@@ -106,7 +106,7 @@ print("Tracing UFFD-WP write fault latency... Hit Ctrl-C to end.")
 # output
 loop = 0
 do_exit = 0
-while (1):
+while 1:
     if count > 0:
         loop += 1
         if loop > count:
@@ -114,7 +114,7 @@ while (1):
     try:
         sleep(interval)
     except KeyboardInterrupt:
-        pass; do_exit = 1
+        do_exit = 1
 
     print()
     b["ev_delta_hist"].print_log2_hist("msecs")

@@ -24,14 +24,14 @@ def cmdline_for_sparse(sparse, cmdline):
             skip = False
             continue
         # prevent sparse from treating output files as inputs
-        if x == '-MF' or x == '-MQ' or x == '-o':
+        if x in ['-MF', '-MQ', '-o']:
             skip = True
             continue
         # cgcc ignores -no-compile if it sees -M or -MM?
         if x.startswith('-M'):
             continue
         # sparse does not understand these!
-        if x == '-iquote' or x == '-isystem':
+        if x in ['-iquote', '-isystem']:
             x = '-I'
         if x == '-I':
             arg = True
@@ -51,8 +51,10 @@ sparse_env = os.environ.copy()
 for cmd in compile_commands:
     cmdline = shlex.split(cmd['command'])
     cmd = cmdline_for_sparse(sparse, cmdline)
-    print('REAL_CC=%s' % shlex.quote(cmdline[0]),
-          ' '.join((shlex.quote(x) for x in cmd)))
+    print(
+        f'REAL_CC={shlex.quote(cmdline[0])}',
+        ' '.join((shlex.quote(x) for x in cmd)),
+    )
     sparse_env['REAL_CC'] = cmdline[0]
     r = subprocess.run(cmd, env=sparse_env, cwd=root_path)
     if r.returncode != 0:

@@ -61,7 +61,7 @@ def gen_param_var(typ: QAPISchemaObjectType) -> str:
         ret += sep
         sep = ', '
         if memb.need_has():
-            ret += 'has_' + c_name(memb.name) + sep
+            ret += f'has_{c_name(memb.name)}{sep}'
         if memb.type.name == 'str':
             # Cast away const added in build_params()
             ret += '(char *)'
@@ -179,9 +179,9 @@ class QAPISchemaGenEventVisitor(QAPISchemaModularCVisitor):
         super().__init__(
             prefix, 'qapi-events',
             ' * Schema-defined QAPI/QMP events', None, __doc__)
-        self._event_enum_name = c_name(prefix + 'QAPIEvent', protect=False)
+        self._event_enum_name = c_name(f'{prefix}QAPIEvent', protect=False)
         self._event_enum_members: List[QAPISchemaEnumMember] = []
-        self._event_emit_name = c_name(prefix + 'qapi_event_emit')
+        self._event_emit_name = c_name(f'{prefix}qapi_event_emit')
 
     def _begin_user_module(self, name: str) -> None:
         events = self._module_basename('qapi-events', name)

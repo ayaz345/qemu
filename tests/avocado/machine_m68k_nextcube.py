@@ -43,8 +43,9 @@ class NextCubeMachine(QemuSystemTest):
         #       'displaysurface_create 1120x832' trace-event.
         time.sleep(2)
 
-        self.vm.command('human-monitor-command',
-                        command_line='screendump %s' % screenshot_path)
+        self.vm.command(
+            'human-monitor-command', command_line=f'screendump {screenshot_path}'
+        )
 
     @skipUnless(PIL_AVAILABLE, 'Python PIL not installed')
     def test_bootrom_framebuffer_size(self):

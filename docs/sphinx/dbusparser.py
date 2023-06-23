@@ -78,7 +78,7 @@ class Property:
         elif self.access == "write":
             self.writable = True
         else:
-            raise ValueError('Invalid access type "{}"'.format(self.access))
+            raise ValueError(f'Invalid access type "{self.access}"')
         self.doc_string = ""
         self.since = ""
         self.deprecated = False
@@ -150,12 +150,12 @@ class DBusXMLParser:
                     colon_index = line.find(": ")
                     if colon_index == -1:
                         if line.endswith(":"):
-                            symbol = line[0 : len(line) - 1]
+                            symbol = line[:-1]
                             comment_state = DBusXMLParser.COMMENT_STATE_PARAMS
                         else:
                             comment_state = DBusXMLParser.COMMENT_STATE_SKIP
                     else:
-                        symbol = line[0:colon_index]
+                        symbol = line[:colon_index]
                         rest_of_line = line[colon_index + 2 :].strip()
                         if len(rest_of_line) > 0:
                             body += rest_of_line + "\n"
@@ -183,10 +183,9 @@ class DBusXMLParser:
                     if not in_para:
                         in_para = True
                     body += orig_line + "\n"
-                else:
-                    if in_para:
-                        body += "\n"
-                        in_para = False
+                elif in_para:
+                    body += "\n"
+                    in_para = False
         if in_para:
             body += "\n"
 
@@ -267,9 +266,7 @@ class DBusXMLParser:
         elif self.state == DBusXMLParser.STATE_METHOD:
             if name == DBusXMLParser.STATE_ARG:
                 self.state = DBusXMLParser.STATE_ARG
-                arg_name = None
-                if "name" in attrs:
-                    arg_name = attrs["name"]
+                arg_name = attrs["name"] if "name" in attrs else None
                 arg = Arg(arg_name, attrs["type"])
                 direction = attrs.get("direction", "in")
                 if direction == "in":
@@ -277,7 +274,7 @@ class DBusXMLParser:
                 elif direction == "out":
                     self._cur_object.out_args.append(arg)
                 else:
-                    raise ValueError('Invalid direction "{}"'.format(direction))
+                    raise ValueError(f'Invalid direction "{direction}"')
                 self._cur_object = arg
             elif name == DBusXMLParser.STATE_ANNOTATION:
                 self.state = DBusXMLParser.STATE_ANNOTATION
@@ -287,9 +284,8 @@ class DBusXMLParser:
             else:
                 self.state = DBusXMLParser.STATE_IGNORED
 
-            # assign docs, if any
-            if self.doc_comment_last_symbol == old_cur_object.name:
-                if "name" in attrs and attrs["name"] in self.doc_comment_params:
+            if "name" in attrs and attrs["name"] in self.doc_comment_params:
+                if self.doc_comment_last_symbol == old_cur_object.name:
                     doc_string = self.doc_comment_params[attrs["name"]]
                     if doc_string is not None:
                         self._cur_object.doc_string = doc_string
@@ -301,9 +297,7 @@ class DBusXMLParser:
         elif self.state == DBusXMLParser.STATE_SIGNAL:
             if name == DBusXMLParser.STATE_ARG:
                 self.state = DBusXMLParser.STATE_ARG
-                arg_name = None
-                if "name" in attrs:
-                    arg_name = attrs["name"]
+                arg_name = attrs["name"] if "name" in attrs else None
                 arg = Arg(arg_name, attrs["type"])
                 self._cur_object.args.append(arg)
                 self._cur_object = arg
@@ -315,9 +309,8 @@ class DBusXMLParser:
             else:
                 self.state = DBusXMLParser.STATE_IGNORED
 
-            # assign docs, if any
-            if self.doc_comment_last_symbol == old_cur_object.name:
-                if "name" in attrs and attrs["name"] in self.doc_comment_params:
+            if "name" in attrs and attrs["name"] in self.doc_comment_params:
+                if self.doc_comment_last_symbol == old_cur_object.name:
                     doc_string = self.doc_comment_params[attrs["name"]]
                     if doc_string is not None:
                         self._cur_object.doc_string = doc_string
@@ -355,9 +348,7 @@ class DBusXMLParser:
 
         else:
             raise ValueError(
-                'Unhandled state "{}" while entering element with name "{}"'.format(
-                    self.state, name
-                )
+                f'Unhandled state "{self.state}" while entering element with name "{name}"'
             )
 
         self.state_stack.append(old_state)

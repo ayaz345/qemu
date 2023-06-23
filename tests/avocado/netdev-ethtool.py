@@ -39,9 +39,7 @@ class NetDevEthtool(QemuSystemTest):
         rootfs = self.get_asset("rootfs.squashfs",
                                 "9793cea7021414ae844bda51f558bd6565b50cdc")
 
-        append = 'printk.time=0 console=ttyS0 '
-        append += 'root=/dev/sr0 rootfstype=squashfs '
-
+        append = 'printk.time=0 console=ttyS0 ' + 'root=/dev/sr0 rootfstype=squashfs '
         # any additional kernel tweaks for the test
         if extra_args:
             append += extra_args

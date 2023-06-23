@@ -60,7 +60,7 @@ def process_all_files(parser: argparse.ArgumentParser, args: argparse.Namespace)
     for c in classes:
         if c not in match_classes \
            or not match_classes[c].regexp:
-            print("Invalid pattern name: %s" % (c), file=sys.stderr)
+            print(f"Invalid pattern name: {c}", file=sys.stderr)
             print("Valid patterns:", file=sys.stderr)
             print(PATTERN_HELP, file=sys.stderr)
             sys.exit(1)
@@ -82,9 +82,11 @@ def process_all_files(parser: argparse.ArgumentParser, args: argparse.Namespace)
                 sys.stdout.flush()
 
 
-PATTERN_HELP = ('\n'.join("  %s: %s" % (n, str(c.__doc__).strip())
-                for (n,c) in sorted(match_class_dict().items())
-                if c.has_replacement_rule()))
+PATTERN_HELP = '\n'.join(
+    f"  {n}: {str(c.__doc__).strip()}"
+    for (n, c) in sorted(match_class_dict().items())
+    if c.has_replacement_rule()
+)
 
 def main() -> None:
     p = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter)

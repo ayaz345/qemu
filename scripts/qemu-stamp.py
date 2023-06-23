@@ -21,4 +21,4 @@ for arg in sys.argv[1:]:
 
 # The hash can start with a digit, which the compiler doesn't
 # like as an symbol. So prefix it with an underscore
-print("_" + sha.hexdigest())
+print(f"_{sha.hexdigest()}")

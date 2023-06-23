@@ -118,7 +118,7 @@ with open("/tmp/perf_report.out", "r") as data:
                  != '#' and line[0] != "\n"]
 
 # Limit the number of top functions to "top"
-number_of_top_functions = top if len(functions) > top else len(functions)
+number_of_top_functions = min(len(functions), top)
 
 # Store the data of the top functions in top_functions[]
 top_functions = functions[:number_of_top_functions]

@@ -104,10 +104,7 @@ class QEMUMonitorProtocol:
         )
 
     def _get_greeting(self) -> Optional[QMPMessage]:
-        if self._qmp.greeting is not None:
-            # pylint: disable=protected-access
-            return self._qmp.greeting._asdict()
-        return None
+        return self._qmp.greeting._asdict() if self._qmp.greeting is not None else None
 
     def __enter__(self: _T) -> _T:
         # Implement context manager enter function.
@@ -240,13 +237,7 @@ class QEMUMonitorProtocol:
             if self._qmp.events.empty():
                 return None
 
-        # If wait is 'True', wait forever. If wait is False/0, the events
-        # queue must not be empty; but it still needs some real amount
-        # of time to complete.
-        timeout = None
-        if wait and isinstance(wait, float):
-            timeout = wait
-
+        timeout = wait if wait and isinstance(wait, float) else None
         return dict(
             self._sync(
                 self._qmp.events.get(),
@@ -269,8 +260,7 @@ class QEMUMonitorProtocol:
 
         :return: A list of QMP events.
         """
-        events = [dict(x) for x in self._qmp.events.clear()]
-        if events:
+        if events := [dict(x) for x in self._qmp.events.clear()]:
             return events
 
         event = self.pull_event(wait)

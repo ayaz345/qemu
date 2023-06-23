@@ -69,28 +69,34 @@ class Multiprocess(QemuSystemTest):
         """
         :avocado: tags=arch:x86_64
         """
-        kernel_url = ('https://archives.fedoraproject.org/pub/archive/fedora'
-                      '/linux/releases/31/Everything/x86_64/os/images'
-                      '/pxeboot/vmlinuz')
         initrd_url = ('https://archives.fedoraproject.org/pub/archive/fedora'
                       '/linux/releases/31/Everything/x86_64/os/images'
                       '/pxeboot/initrd.img')
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'console=ttyS0 rdinit=/bin/bash')
+        kernel_command_line = (
+            f'{self.KERNEL_COMMON_COMMAND_LINE}console=ttyS0 rdinit=/bin/bash'
+        )
         machine_type = 'pc'
+        kernel_url = (
+            'https://archives.fedoraproject.org/pub/archive/fedora'
+            '/linux/releases/31/Everything/x86_64/os/images'
+            '/pxeboot/vmlinuz'
+        )
         self.do_test(kernel_url, initrd_url, kernel_command_line, machine_type)
 
     def test_multiprocess_aarch64(self):
         """
         :avocado: tags=arch:aarch64
         """
-        kernel_url = ('https://archives.fedoraproject.org/pub/archive/fedora'
-                      '/linux/releases/31/Everything/aarch64/os/images'
-                      '/pxeboot/vmlinuz')
         initrd_url = ('https://archives.fedoraproject.org/pub/archive/fedora'
                       '/linux/releases/31/Everything/aarch64/os/images'
                       '/pxeboot/initrd.img')
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'rdinit=/bin/bash console=ttyAMA0')
+        kernel_command_line = (
+            f'{self.KERNEL_COMMON_COMMAND_LINE}rdinit=/bin/bash console=ttyAMA0'
+        )
         machine_type = 'virt,gic-version=3'
+        kernel_url = (
+            'https://archives.fedoraproject.org/pub/archive/fedora'
+            '/linux/releases/31/Everything/aarch64/os/images'
+            '/pxeboot/vmlinuz'
+        )
         self.do_test(kernel_url, initrd_url, kernel_command_line, machine_type)

@@ -47,12 +47,14 @@ class MaltaMachineFramebuffer(QemuSystemTest):
         """
         screendump_path = os.path.join(self.workdir, 'screendump.pbm')
 
-        kernel_url = ('https://github.com/philmd/qemu-testing-blob/raw/'
-                      'a5966ca4b5/mips/malta/mips64el/'
-                      'vmlinux-4.7.0-rc1.I6400.gz')
         kernel_hash = '096f50c377ec5072e6a366943324622c312045f6'
+        kernel_url = (
+            'https://github.com/philmd/qemu-testing-blob/raw/'
+            'a5966ca4b5/mips/malta/mips64el/'
+            'vmlinux-4.7.0-rc1.I6400.gz'
+        )
         kernel_path_gz = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
-        kernel_path = self.workdir + "vmlinux"
+        kernel_path = f"{self.workdir}vmlinux"
         archive.gzip_uncompress(kernel_path_gz, kernel_path)
 
         tuxlogo_url = ('https://github.com/torvalds/linux/raw/v2.6.12/'
@@ -61,8 +63,7 @@ class MaltaMachineFramebuffer(QemuSystemTest):
         tuxlogo_path = self.fetch_asset(tuxlogo_url, asset_hash=tuxlogo_hash)
 
         self.vm.set_console()
-        kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE +
-                               'clocksource=GIC console=tty0 console=ttyS0')
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}clocksource=GIC console=tty0 console=ttyS0'
         self.vm.add_args('-kernel', kernel_path,
                          '-smp', '%u' % cpu_cores_count,
                          '-vga', 'std',
@@ -72,8 +73,9 @@ class MaltaMachineFramebuffer(QemuSystemTest):
         wait_for_console_pattern(self, framebuffer_ready,
                                  failure_message='Kernel panic - not syncing')
         self.vm.command('human-monitor-command', command_line='stop')
-        self.vm.command('human-monitor-command',
-                        command_line='screendump %s' % screendump_path)
+        self.vm.command(
+            'human-monitor-command', command_line=f'screendump {screendump_path}'
+        )
         logger = logging.getLogger('framebuffer')
 
         match_threshold = 0.95

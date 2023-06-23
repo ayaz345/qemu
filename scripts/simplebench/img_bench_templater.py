@@ -35,14 +35,13 @@ def bench_func(env, case):
     p = subprocess.run(test, shell=True, stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT, universal_newlines=True)
 
-    if p.returncode == 0:
-        try:
-            m = re.search(r'Run completed in (\d+.\d+) seconds.', p.stdout)
-            return {'seconds': float(m.group(1))}
-        except Exception:
-            return {'error': f'failed to parse qemu-img output: {p.stdout}'}
-    else:
+    if p.returncode != 0:
         return {'error': f'qemu-img failed: {p.returncode}: {p.stdout}'}
+    try:
+        m = re.search(r'Run completed in (\d+.\d+) seconds.', p.stdout)
+        return {'seconds': float(m[1])}
+    except Exception:
+        return {'error': f'failed to parse qemu-img output: {p.stdout}'}
 
 
 if __name__ == '__main__':

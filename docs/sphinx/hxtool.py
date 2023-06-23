@@ -63,7 +63,7 @@ def parse_defheading(file, lnum, line):
     match = re.match(r'DEFHEADING\((.*?):?\)', line)
     if match is None:
         serror(file, lnum, "Invalid DEFHEADING line")
-    return match.group(1)
+    return match[1]
 
 def parse_archheading(file, lnum, line):
     """Handle an ARCHHEADING directive"""
@@ -76,7 +76,7 @@ def parse_archheading(file, lnum, line):
     match = re.match(r'ARCHHEADING\((.*?):?,.*\)', line)
     if match is None:
         serror(file, lnum, "Invalid ARCHHEADING line")
-    return match.group(1)
+    return match[1]
 
 class HxtoolDocDirective(Directive):
     """Extract rST fragments from the specified .hx file"""
@@ -89,7 +89,7 @@ class HxtoolDocDirective(Directive):
 
     def run(self):
         env = self.state.document.settings.env
-        hxfile = env.config.hxtool_srctree + '/' + self.arguments[0]
+        hxfile = f'{env.config.hxtool_srctree}/{self.arguments[0]}'
 
         # Tell sphinx of the dependency
         env.note_dependency(os.path.abspath(hxfile))
@@ -118,11 +118,12 @@ class HxtoolDocDirective(Directive):
                         serror(hxfile, lnum, 'expected SRST, found ERST')
                     else:
                         state = HxState.CTEXT
-                elif directive == 'DEFHEADING' or directive == 'ARCHHEADING':
-                    if directive == 'DEFHEADING':
-                        heading = parse_defheading(hxfile, lnum, line)
-                    else:
-                        heading = parse_archheading(hxfile, lnum, line)
+                elif directive in ['DEFHEADING', 'ARCHHEADING']:
+                    heading = (
+                        parse_defheading(hxfile, lnum, line)
+                        if directive == 'DEFHEADING'
+                        else parse_archheading(hxfile, lnum, line)
+                    )
                     if heading == "":
                         continue
                     # Put the accumulated rST into the previous node,
@@ -142,11 +143,9 @@ class HxtoolDocDirective(Directive):
                     section_id = 'hxtool-%d' % env.new_serialno('hxtool')
                     current_node = nodes.section(ids=[section_id])
                     current_node += nodes.title(heading, heading)
-                else:
-                    # Not a directive: put in output if we are in rST fragment
-                    if state == HxState.RST:
-                        # Sphinx counts its lines from 0
-                        rstlist.append(line, hxfile, lnum - 1)
+                elif state == HxState.RST:
+                    # Sphinx counts its lines from 0
+                    rstlist.append(line, hxfile, lnum - 1)
 
         if current_node is None:
             # We don't have multiple sections, so just parse the rst

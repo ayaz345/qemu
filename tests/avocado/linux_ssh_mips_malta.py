@@ -56,7 +56,7 @@ class LinuxSSH(QemuSystemTest, LinuxSSHMixIn):
 
     def get_url(self, endianess, path=''):
         qkey = {'le': 'el', 'be': ''}
-        return '%s/mips%s/%s' % (self.BASE_URL, qkey[endianess], path)
+        return f'{self.BASE_URL}/mips{qkey[endianess]}/{path}'
 
     def get_image_info(self, endianess):
         dinfo = self.IMAGE_INFO[endianess]
@@ -66,8 +66,7 @@ class LinuxSSH(QemuSystemTest, LinuxSSHMixIn):
 
     def get_kernel_info(self, endianess, wordsize):
         minfo = self.CPU_INFO[wordsize]
-        kernel_url = self.get_url(endianess,
-                                  'vmlinux-%s' % minfo['kernel_release'])
+        kernel_url = self.get_url(endianess, f"vmlinux-{minfo['kernel_release']}")
         kernel_hash = self.IMAGE_INFO[endianess]['kernel_hash'][wordsize]
         return kernel_url, kernel_hash
 
@@ -81,12 +80,19 @@ class LinuxSSH(QemuSystemTest, LinuxSSHMixIn):
         self.vm.set_console()
         kernel_command_line = (self.KERNEL_COMMON_COMMAND_LINE
                                + 'console=ttyS0 root=/dev/sda1')
-        self.vm.add_args('-no-reboot',
-                         '-kernel', kernel_path,
-                         '-append', kernel_command_line,
-                         '-drive', 'file=%s,snapshot=on' % image_path,
-                         '-netdev', 'user,id=vnet,hostfwd=:127.0.0.1:0-:22',
-                         '-device', 'pcnet,netdev=vnet')
+        self.vm.add_args(
+            '-no-reboot',
+            '-kernel',
+            kernel_path,
+            '-append',
+            kernel_command_line,
+            '-drive',
+            f'file={image_path},snapshot=on',
+            '-netdev',
+            'user,id=vnet,hostfwd=:127.0.0.1:0-:22',
+            '-device',
+            'pcnet,netdev=vnet',
+        )
         self.vm.launch()
 
         self.log.info('VM launched, waiting for sshd')
@@ -165,7 +171,7 @@ class LinuxSSH(QemuSystemTest, LinuxSSHMixIn):
         self.boot_debian_wheezy_image_and_ssh_login(endianess, kernel_path)
 
         stdout, _ = self.ssh_command('uname -a')
-        self.assertIn(True, [uname_m + " GNU/Linux" in line for line in stdout])
+        self.assertIn(True, [f"{uname_m} GNU/Linux" in line for line in stdout])
 
         self.run_common_commands(wordsize)
         self.shutdown_via_ssh()

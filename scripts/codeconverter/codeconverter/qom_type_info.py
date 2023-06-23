@@ -52,9 +52,7 @@ class FieldInitializer(FileMatch):
     @property
     def parsed(self) -> ParsedInitializerValue:
         parsed: ParsedInitializerValue = self.raw
-        #DBG("parse_initializer_value: %r", s)
-        array = self.try_group_match(ArrayInitializer, 'value')
-        if array:
+        if array := self.try_group_match(ArrayInitializer, 'value'):
             assert isinstance(array, ArrayInitializer)
             return array.parsed()
         return parsed
@@ -89,8 +87,10 @@ class TypeDefinition(FileMatch):
         fields = self.group('fields')
         if fields is None:
             return None
-        d = dict((fm.group('field'), fm)
-                  for fm in self.group_finditer(FieldInitializer, 'fields'))
+        d = {
+            fm.group('field'): fm
+            for fm in self.group_finditer(FieldInitializer, 'fields')
+        }
         self._initializers = d # type: ignore
         return self._initializers
 
@@ -114,16 +114,11 @@ class TypeInfoVar(TypeDefinition):
 
     def get_initializers(self) -> TypeInfoInitializers:
         """Helper for code that needs to deal with missing initializer info"""
-        if self.initializers is None:
-            return {}
-        return self.initializers
+        return {} if self.initializers is None else self.initializers
 
     def get_raw_initializer_value(self, field: str, default: str = '') -> str:
         initializers = self.get_initializers()
-        if field in initializers:
-            return initializers[field].raw
-        else:
-            return default
+        return initializers[field].raw if field in initializers else default
 
     @property
     def typename(self) -> Optional[str]:
@@ -131,12 +126,10 @@ class TypeInfoVar(TypeDefinition):
 
     @property
     def uppercase(self) -> Optional[str]:
-        typename = self.typename
-        if not typename:
+        if typename := self.typename:
+            return None if not typename.startswith('TYPE_') else typename[len('TYPE_'):]
+        else:
             return None
-        if not typename.startswith('TYPE_'):
-            return None
-        return typename[len('TYPE_'):]
 
     @property
     def classtype(self) -> Optional[str]:
@@ -144,9 +137,7 @@ class TypeInfoVar(TypeDefinition):
         if not class_size:
             return None
         m = re.fullmatch(RE_SIZEOF, class_size)
-        if not m:
-            return None
-        return m.group('sizeoftype')
+        return None if not m else m['sizeoftype']
 
     @property
     def instancetype(self) -> Optional[str]:
@@ -154,9 +145,7 @@ class TypeInfoVar(TypeDefinition):
         if not instance_size:
             return None
         m = re.fullmatch(RE_SIZEOF, instance_size)
-        if not m:
-            return None
-        return m.group('sizeoftype')
+        return None if not m else m['sizeoftype']
 
 
     #def extract_identifiers(self) -> Optional[TypeIdentifiers]:
@@ -240,7 +229,7 @@ class RemoveRedundantClassSize(TypeInfoVar):
         if not m:
             self.warn("%s class_size is not sizeof?", self.name)
             return
-        classtype = m.group('sizeoftype')
+        classtype = m['sizeoftype']
         if not classtype.endswith('Class'):
             self.warn("%s class size type (%s) is not *Class?", self.name, classtype)
             return
@@ -296,9 +285,8 @@ class UseDeclareTypeExtended(TypeInfoVar):
 
         instancetype = None
         if 'instance_size' in values:
-            m = re.fullmatch(RE_SIZEOF, values['instance_size'].raw)
-            if m:
-                instancetype = m.group('sizeoftype')
+            if m := re.fullmatch(RE_SIZEOF, values['instance_size'].raw):
+                instancetype = m['sizeoftype']
             else:
                 self.warn("can't extract instance type in TypeInfo variable %s", self.name)
                 self.warn("instance_size is set to: %r", values['instance_size'].raw)
@@ -306,9 +294,8 @@ class UseDeclareTypeExtended(TypeInfoVar):
 
         classtype = None
         if 'class_size' in values:
-            m = re.fullmatch(RE_SIZEOF, values['class_size'].raw)
-            if m:
-                classtype = m.group('sizeoftype')
+            if m := re.fullmatch(RE_SIZEOF, values['class_size'].raw):
+                classtype = m['sizeoftype']
             else:
                 self.warn("can't extract class type in TypeInfo variable %s", self.name)
                 self.warn("class_size is set to: %r", values['class_size'].raw)
@@ -467,16 +454,14 @@ class AddDeclareVoidClassType(TypeDeclarationFixup):
             for d in defs:
                 d.warn("definition found here")
             return
-        elif len(defs) == 0:
+        elif not defs:
             self.warn("type definition for %s not found", uppercase)
             return
         d = defs[0]
         if d.classtype is None:
             d.info("definition for %s has classtype, skipping", uppercase)
             return
-        class_type_checkers = [c for c in checkers
-                               if c.classtype is not None]
-        if class_type_checkers:
+        if class_type_checkers := [c for c in checkers if c.classtype is not None]:
             for c in class_type_checkers:
                 c.warn("class type checker for %s is present here", uppercase)
             return
@@ -500,7 +485,7 @@ class AddDeclareVoidInstanceType(FileMatch):
             for d in defs:
                 d.warn("definition found here")
             return
-        elif len(defs) == 0:
+        elif not defs:
             self.warn("type definition for %s not found", uppercase)
             return
         d = defs[0]
@@ -508,9 +493,11 @@ class AddDeclareVoidInstanceType(FileMatch):
         if instancetype is not None and instancetype != 'void':
             return
 
-        instance_checkers = [c for c in find_type_checkers(self.allfiles, uppercase)
-                             if c.instancetype]
-        if instance_checkers:
+        if instance_checkers := [
+            c
+            for c in find_type_checkers(self.allfiles, uppercase)
+            if c.instancetype
+        ]:
             d.warn("instance type checker for %s already declared", uppercase)
             for c in instance_checkers:
                 c.warn("instance checker for %s is here", uppercase)
@@ -544,10 +531,13 @@ class AddObjectDeclareType(DeclareObjCheckers):
                     td.warn("typedef is here")
                     return
 
-        # look for reuse of same struct type
-        other_instance_checkers = [c for c in find_type_checkers(self.allfiles, instancetype, 'instancetype')
-                                if c.uppercase != uppercase]
-        if other_instance_checkers:
+        if other_instance_checkers := [
+            c
+            for c in find_type_checkers(
+                self.allfiles, instancetype, 'instancetype'
+            )
+            if c.uppercase != uppercase
+        ]:
             self.warn("typedef %s is being reused", instancetype)
             for ic in other_instance_checkers:
                 ic.warn("%s is reused here", instancetype)
@@ -565,7 +555,7 @@ class AddObjectDeclareType(DeclareObjCheckers):
                 d.warn("definition found here")
             if not self.file.force:
                 return
-        elif len(defs) == 0:
+        elif not defs:
             self.warn("type definition for %s not found", uppercase)
             if not self.file.force:
                 return
@@ -624,10 +614,13 @@ class AddObjectDeclareSimpleType(DeclareInstanceChecker):
                     td.warn("typedef is here")
                     return
 
-        # look for reuse of same struct type
-        other_instance_checkers = [c for c in find_type_checkers(self.allfiles, instancetype, 'instancetype')
-                                if c.uppercase != uppercase]
-        if other_instance_checkers:
+        if other_instance_checkers := [
+            c
+            for c in find_type_checkers(
+                self.allfiles, instancetype, 'instancetype'
+            )
+            if c.uppercase != uppercase
+        ]:
             self.warn("typedef %s is being reused", instancetype)
             for ic in other_instance_checkers:
                 ic.warn("%s is reused here", instancetype)
@@ -635,9 +628,11 @@ class AddObjectDeclareSimpleType(DeclareInstanceChecker):
                 return
 
         decl_types: List[Type[TypeDeclaration]] = [DeclareClassCheckers, DeclareObjCheckers]
-        class_decls = [m for t in decl_types
-                       for m in self.allfiles.find_matches(t, uppercase, 'uppercase')]
-        if class_decls:
+        if class_decls := [
+            m
+            for t in decl_types
+            for m in self.allfiles.find_matches(t, uppercase, 'uppercase')
+        ]:
             self.warn("class type declared for %s", uppercase)
             for cd in class_decls:
                 cd.warn("class declaration found here")
@@ -650,7 +645,7 @@ class AddObjectDeclareSimpleType(DeclareInstanceChecker):
                 d.warn("definition found here")
             if not self.file.force:
                 return
-        elif len(defs) == 0:
+        elif not defs:
             self.warn("type definition for %s not found", uppercase)
             if not self.file.force:
                 return
@@ -731,8 +726,7 @@ class RedundantTypeSizes(TypeInfoVar):
             self.debug("no need to validate %s", self.name)
             return
 
-        instance_decls = find_type_checkers(self.allfiles, typename)
-        if instance_decls:
+        if instance_decls := find_type_checkers(self.allfiles, typename):
             self.debug("won't touch TypeInfo var that has type checkers")
             return
 
@@ -844,10 +838,14 @@ class StaticVoidFunction(FileMatch):
 
 def find_containing_func(m: FileMatch) -> Optional['StaticVoidFunction']:
     """Return function containing this match"""
-    for fn in m.file.matches_of_type(StaticVoidFunction):
-        if fn.contains(m):
-            return fn
-    return None
+    return next(
+        (
+            fn
+            for fn in m.file.matches_of_type(StaticVoidFunction)
+            if fn.contains(m)
+        ),
+        None,
+    )
 
 class TypeRegisterStaticCall(FileMatch):
     """type_register_static() call
@@ -932,7 +930,7 @@ def find_type_info(files: RegexpScanner, name: str) -> Optional[TypeInfoVar]:
     if len(ti) > 1:
         DBG("multiple TypeInfo vars found for %s", name)
         return None
-    if len(ti) == 0:
+    if not ti:
         DBG("no TypeInfo var found for %s", name)
         return None
     return ti[0]
@@ -952,7 +950,6 @@ class CreateClassStruct(DeclareInstanceChecker):
             return
         classtype = self.group('instancetype')+'Class'
         return
-        yield
         #TODO: need to find out what's the parent class type...
         #yield var.append_field('class_size', f'sizeof({classtype})')
         #c = (f'OBJECT_DECLARE_SIMPLE_TYPE({instancetype}, {lowercase},\n'

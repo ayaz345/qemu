@@ -27,9 +27,9 @@ class pseriesMachine(QemuSystemTest):
         kernel_path = self.fetch_asset(kernel_url, asset_hash=kernel_hash)
 
         self.vm.set_console()
-        kernel_command_line = self.KERNEL_COMMON_COMMAND_LINE + 'console=hvc0'
+        kernel_command_line = f'{self.KERNEL_COMMON_COMMAND_LINE}console=hvc0'
         self.vm.add_args('-kernel', kernel_path,
                          '-append', kernel_command_line)
         self.vm.launch()
-        console_pattern = 'Kernel command line: %s' % kernel_command_line
+        console_pattern = f'Kernel command line: {kernel_command_line}'
         wait_for_console_pattern(self, console_pattern, self.panic_message)

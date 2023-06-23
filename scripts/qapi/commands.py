@@ -68,13 +68,10 @@ def gen_call(name: str,
         for memb in arg_type.members:
             assert not memb.ifcond.is_present()
             if memb.need_has():
-                argstr += 'arg.has_%s, ' % c_name(memb.name)
-            argstr += 'arg.%s, ' % c_name(memb.name)
+                argstr += f'arg.has_{c_name(memb.name)}, '
+            argstr += f'arg.{c_name(memb.name)}, '
 
-    lhs = ''
-    if ret_type:
-        lhs = 'retval = '
-
+    lhs = 'retval = ' if ret_type else ''
     name = c_name(name)
     upper = name.upper()
 
@@ -292,14 +289,16 @@ def gen_register_command(name: str,
     if coroutine:
         options += ['QCO_COROUTINE']
 
-    ret = mcgen('''
+    return mcgen(
+        '''
     qmp_register_command(cmds, "%(name)s",
                          qmp_marshal_%(c_name)s, %(opts)s, %(feats)s);
 ''',
-                name=name, c_name=c_name(name),
-                opts=' | '.join(options) or 0,
-                feats=gen_special_features(features))
-    return ret
+        name=name,
+        c_name=c_name(name),
+        opts=' | '.join(options) or 0,
+        feats=gen_special_features(features),
+    )
 
 
 class QAPISchemaGenCommandVisitor(QAPISchemaModularCVisitor):

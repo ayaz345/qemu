@@ -29,7 +29,7 @@ def c_macro_to_format(macro):
     if macro.startswith("PRI"):
         return macro[3]
 
-    raise Exception("Unhandled macro '%s'" % macro)
+    raise Exception(f"Unhandled macro '{macro}'")
 
 def c_fmt_to_stap(fmt):
     state = 0
@@ -39,10 +39,7 @@ def c_fmt_to_stap(fmt):
     escape = 0;
     for i in range(len(fmt)):
         if fmt[i] == '\\':
-            if escape:
-                escape = 0
-            else:
-                escape = 1
+            escape = 0 if escape else 1
             if state != STATE_LITERAL:
                 raise Exception("Unexpected escape outside string literal")
             literal = literal + fmt[i]
@@ -56,7 +53,7 @@ def c_fmt_to_stap(fmt):
                     bits.append(c_macro_to_format(macro))
                     macro = ""
                 state = STATE_LITERAL
-        elif fmt[i] == ' ' or fmt[i] == '\t':
+        elif fmt[i] in [' ', '\t']:
             if state == STATE_MACRO:
                 bits.append(c_macro_to_format(macro))
                 macro = ""
@@ -114,13 +111,13 @@ def generate(events, backend, group):
         for type_, name in e.args:
             name = stap_escape(name)
             if is_string(type_):
-                fields.append("arg" + name + "_str")
+                fields.append(f"arg{name}_str")
             else:
                 fields.append(name)
 
         # Emit the entire record in a single SystemTap printf()
-        arg_str = ', '.join(arg for arg in fields)
-        fmt_str = "%d@%d " + e.name + " " + c_fmt_to_stap(e.fmt) + "\\n"
+        arg_str = ', '.join(fields)
+        fmt_str = f"%d@%d {e.name} {c_fmt_to_stap(e.fmt)}" + "\\n"
         out('    printf("%(fmt_str)s", %(arg_str)s)',
             fmt_str=fmt_str, arg_str=arg_str)
 

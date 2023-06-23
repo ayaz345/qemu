@@ -67,11 +67,11 @@ def check_if_trace_crashes(trace, path):
     if CRASH_TOKEN is None:
         try:
             outs, _ = rc.communicate(timeout=5)
-            CRASH_TOKEN = " ".join(outs.splitlines()[-2].split()[0:3])
+            CRASH_TOKEN = " ".join(outs.splitlines()[-2].split()[:3])
         except subprocess.TimeoutExpired:
             print("subprocess.TimeoutExpired")
             return False
-        print("Identifying Crashes by this string: {}".format(CRASH_TOKEN))
+        print(f"Identifying Crashes by this string: {CRASH_TOKEN}")
         global deduplication_note
         print(deduplication_note)
         return True
@@ -207,7 +207,7 @@ def remove_lines(newtrace, outpath):
                         newtrace[i] = prior[0]
 
                 # Try splitting it using a binary approach
-                leftlength = int(length/2)
+                leftlength = length // 2
                 rightlength = length - leftlength
                 newtrace.insert(i+1, "")
                 power = 1
@@ -247,7 +247,7 @@ def clear_bits(newtrace, outpath):
            continue
         # write ADDR SIZE DATA
         # outx ADDR VALUE
-        print("\nzero setting bits: {}".format(newtrace[i]))
+        print(f"\nzero setting bits: {newtrace[i]}")
 
         prefix = " ".join(newtrace[i].split()[:-1])
         data = newtrace[i].split()[-1]
@@ -255,14 +255,14 @@ def clear_bits(newtrace, outpath):
         data_bin_list = list(data_bin)
 
         for j in range(2, len(data_bin_list)):
-            prior = newtrace[i]
             if (data_bin_list[j] == '1'):
                 data_bin_list[j] = '0'
                 data_try = hex(int("".join(data_bin_list), 2))
                 # It seems qtest only accepts padded hex-values.
                 if len(data_try) % 2 == 1:
-                    data_try = data_try[:2] + "0" + data_try[2:]
+                    data_try = f"{data_try[:2]}0{data_try[2:]}"
 
+                prior = newtrace[i]
                 newtrace[i] = "{prefix} {data_try}\n".format(
                         prefix=prefix,
                         data_try=data_try)
@@ -281,9 +281,9 @@ def minimize_trace(inpath, outpath):
     if not check_if_trace_crashes(trace, outpath):
         sys.exit("The input qtest trace didn't cause a crash...")
     end = time.time()
-    print("Crashed in {} seconds".format(end-start))
+    print(f"Crashed in {end - start} seconds")
     TIMEOUT = (end-start)*5
-    print("Setting the timeout for {} seconds".format(TIMEOUT))
+    print(f"Setting the timeout for {TIMEOUT} seconds")
 
     newtrace = trace[:]
     global M1, M2

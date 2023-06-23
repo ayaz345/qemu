@@ -140,7 +140,7 @@ suppress_warnings = ["ref.option"]
 # environment variable is not set is for the benefit of readthedocs
 # style document building; our Makefile always sets the variable.
 confdir = os.getenv('CONFDIR', "/etc/qemu")
-rst_epilog = ".. |CONFDIR| replace:: ``" + confdir + "``\n"
+rst_epilog = f".. |CONFDIR| replace:: ``{confdir}" + "``\n"
 # We slurp in the defs.rst.inc and literally include it into rst_epilog,
 # because Sphinx's include:: directive doesn't work with absolute paths
 # and there isn't any one single relative path that will work for all

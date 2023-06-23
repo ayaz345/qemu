@@ -238,10 +238,7 @@ def genptr_decl_opn(f, tag, regtype, regid, i):
 
 
 def genptr_decl_imm(f, immlett):
-    if immlett.isupper():
-        i = 1
-    else:
-        i = 0
+    i = 1 if immlett.isupper() else 0
     f.write(f"    int {hex_common.imm_name(immlett)} = insn->immed[{i}];\n")
 
 
@@ -332,16 +329,18 @@ def genptr_src_read(f, tag, regtype, regid):
 
 
 def genptr_src_read_new(f, regtype, regid):
-    if regtype == "N":
-        if regid not in {"s", "t"}:
-            hex_common.bad_register(regtype, regid)
-    elif regtype == "P":
-        if regid not in {"t", "u", "v"}:
-            hex_common.bad_register(regtype, regid)
-    elif regtype == "O":
-        if regid != "s":
-            hex_common.bad_register(regtype, regid)
-    else:
+    if (
+        regtype == "N"
+        and regid not in {"s", "t"}
+        or regtype != "N"
+        and regtype == "P"
+        and regid not in {"t", "u", "v"}
+        or regtype != "N"
+        and regtype != "P"
+        and regtype == "O"
+        and regid != "s"
+        or regtype not in ["N", "P", "O"]
+    ):
         hex_common.bad_register(regtype, regid)
 
 
@@ -428,23 +427,24 @@ def genptr_dst_write(f, tag, regtype, regid):
 
 
 def genptr_dst_write_ext(f, tag, regtype, regid, newv="EXT_DFL"):
-    if regtype == "V":
-        if regid in {"xx"}:
-            f.write(
-                f"    gen_log_vreg_write_pair(ctx, {regtype}{regid}V_off, "
-                f"{regtype}{regid}N, {newv});\n"
-            )
-        elif regid in {"y"}:
-            f.write(
-                f"    gen_log_vreg_write(ctx, {regtype}{regid}V_off, "
-                f"{regtype}{regid}N, {newv});\n"
-            )
-        elif regid not in {"dd", "d", "x"}:
-            hex_common.bad_register(regtype, regid)
-    elif regtype == "Q":
-        if regid not in {"d", "e", "x"}:
-            hex_common.bad_register(regtype, regid)
-    else:
+    if regtype == "V" and regid in {"xx"}:
+        f.write(
+            f"    gen_log_vreg_write_pair(ctx, {regtype}{regid}V_off, "
+            f"{regtype}{regid}N, {newv});\n"
+        )
+    elif regtype == "V" and regid in {"y"}:
+        f.write(
+            f"    gen_log_vreg_write(ctx, {regtype}{regid}V_off, "
+            f"{regtype}{regid}N, {newv});\n"
+        )
+    elif (
+        regtype == "V"
+        and regid not in {"dd", "d", "x"}
+        or regtype != "V"
+        and regtype == "Q"
+        and regid not in {"d", "e", "x"}
+        or regtype not in ["V", "Q"]
+    ):
         hex_common.bad_register(regtype, regid)
 
 
@@ -500,11 +500,9 @@ def gen_tcg_func(f, tag, regs, imms):
 
     if hex_common.need_ea(tag):
         gen_decl_ea_tcg(f, tag)
-    i = 0
     ## Declare all the operands (regs and immediates)
-    for regtype, regid in regs:
+    for i, (regtype, regid) in enumerate(regs):
         genptr_decl_opn(f, tag, regtype, regid, i)
-        i += 1
     for immlett, bits, immshift in imms:
         genptr_decl_imm(f, immlett)
 
@@ -535,9 +533,9 @@ def gen_tcg_func(f, tag, regs, imms):
                 hex_common.bad_register(regtype, regid)
 
         ## Handle immediates
-        for immlett, bits, immshift in imms:
-            declared.append(hex_common.imm_name(immlett))
-
+        declared.extend(
+            hex_common.imm_name(immlett) for immlett, bits, immshift in imms
+        )
         arguments = ", ".join(["ctx", "ctx->insn", "ctx->pkt"] + declared)
         f.write(f"    emit_{tag}({arguments});\n")
 

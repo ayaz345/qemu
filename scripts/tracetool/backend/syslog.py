@@ -28,13 +28,13 @@ def generate_h_begin(events, group):
 def generate_h(event, group):
     argnames = ", ".join(event.args.names())
     if len(event.args) > 0:
-        argnames = ", " + argnames
+        argnames = f", {argnames}"
 
     if "vcpu" in event.properties:
         # already checked on the generic format code
         cond = "true"
     else:
-        cond = "trace_event_get_state(%s)" % ("TRACE_" + event.name.upper())
+        cond = f"trace_event_get_state(TRACE_{event.name.upper()})"
 
     out('    if (%(cond)s) {',
         '#line %(event_lineno)d "%(event_filename)s"',
@@ -50,5 +50,7 @@ def generate_h(event, group):
 
 
 def generate_h_backend_dstate(event, group):
-    out('    trace_event_get_state_dynamic_by_id(%(event_id)s) || \\',
-        event_id="TRACE_" + event.name.upper())
+    out(
+        '    trace_event_get_state_dynamic_by_id(%(event_id)s) || \\',
+        event_id=f"TRACE_{event.name.upper()}",
+    )

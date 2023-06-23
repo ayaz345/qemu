@@ -35,7 +35,7 @@ def check_rebase():
     with open(f'{gitdir}/rebase-merge/head-name', 'r', encoding = 'utf-8') as f:
         head = f.read().strip().split('/')
 
-    rebase_prefix = f'[ {int(msgnum/2)} / {int(end/2)} - {head[-1]} ] '
+    rebase_prefix = f'[ {msgnum // 2} / {end // 2} - {head[-1]} ] '
     if msgnum != end and not version_override:
         # fixed version speeds up builds
         version_override = "test-build-patch-series"
@@ -59,7 +59,7 @@ def get_version(cfg):
         print('')
         print(f'### version [rpmbuild]: {version}')
         return version
-    if os.path.exists(coredir + '/.git'):
+    if os.path.exists(f'{coredir}/.git'):
         cmdline = [ 'git', 'describe', '--tags', '--abbrev=8',
                     '--match=edk2-stable*' ]
         result = subprocess.run(cmdline, cwd = coredir,
@@ -130,14 +130,11 @@ def build_copy(plat, tgt, dstdir, copy):
     srcdir = f'Build/{plat}/{tgt}_GCC5'
     names = copy.split()
     srcfile = names[0]
-    if len(names) > 1:
-        dstfile = names[1]
-    else:
-        dstfile = os.path.basename(srcfile)
+    dstfile = names[1] if len(names) > 1 else os.path.basename(srcfile)
     print(f'# copy: {srcdir} / {srcfile}  =>  {dstdir} / {dstfile}')
 
-    src = srcdir + '/' + srcfile
-    dst = dstdir + '/' + dstfile
+    src = f'{srcdir}/{srcfile}'
+    dst = f'{dstdir}/{dstfile}'
     os.makedirs(os.path.dirname(dst), exist_ok = True)
     shutil.copy(src, dst)
 
@@ -147,11 +144,7 @@ def pad_file(dstdir, pad):
         raise RuntimeError(f'missing arg for pad ({args})')
     name = args[0]
     size = args[1]
-    cmdline = [
-        'truncate',
-        '--size', size,
-        dstdir + '/' + name,
-    ]
+    cmdline = ['truncate', '--size', size, f'{dstdir}/{name}']
     print(f'# padding: {dstdir} / {name}  =>  {size}')
     subprocess.run(cmdline, check = True)
 
@@ -172,28 +165,24 @@ def build_one(cfg, build, jobs = None, silent = False):
         cmdline += [ '-a', arch ]
     if 'opts' in cfg[build]:
         for name in cfg[build]['opts'].split():
-            section = 'opts.' + name
+            section = f'opts.{name}'
             for opt in cfg[section]:
-                cmdline += [ '-D', opt + '=' + cfg[section][opt] ]
+                cmdline += ['-D', f'{opt}={cfg[section][opt]}']
     if 'pcds' in cfg[build]:
         for name in cfg[build]['pcds'].split():
-            section = 'pcds.' + name
+            section = f'pcds.{name}'
             for pcd in cfg[section]:
-                cmdline += [ '--pcd', pcd + '=' + cfg[section][pcd] ]
-    if 'tgts' in cfg[build]:
-        tgts = cfg[build]['tgts'].split()
-    else:
-        tgts = [ 'DEBUG' ]
+                cmdline += ['--pcd', f'{pcd}={cfg[section][pcd]}']
+    tgts = cfg[build]['tgts'].split() if 'tgts' in cfg[build] else [ 'DEBUG' ]
     for tgt in tgts:
         desc = None
         if 'desc' in cfg[build]:
             desc = cfg[build]['desc']
         build_message(f'building: {cfg[build]["conf"]} ({cfg[build]["arch"]}, {tgt})',
                       f'description: {desc}')
-        build_run(cmdline + [ '-b', tgt ],
-                  cfg[build]['conf'],
-                  build + '.' + tgt,
-                  silent)
+        build_run(
+            cmdline + ['-b', tgt], cfg[build]['conf'], f'{build}.{tgt}', silent
+        )
 
         if 'plat' in cfg[build]:
             # copy files
@@ -218,10 +207,10 @@ def build_basetools(silent = False):
     build_run(cmdline, 'BaseTools', 'build.basetools', silent)
 
 def binary_exists(name):
-    for pdir in os.environ['PATH'].split(':'):
-        if os.path.exists(pdir + '/' + name):
-            return True
-    return False
+    return any(
+        os.path.exists(f'{pdir}/{name}')
+        for pdir in os.environ['PATH'].split(':')
+    )
 
 def prepare_env(cfg):
     """ mimic Conf/BuildEnv.sh """
@@ -234,15 +223,16 @@ def prepare_env(cfg):
     ]
 
     if cfg.has_option('global', 'pkgs'):
-        for pkgdir in cfg['global']['pkgs'].split():
-            packages.append(os.path.abspath(pkgdir))
+        packages.extend(
+            os.path.abspath(pkgdir) for pkgdir in cfg['global']['pkgs'].split()
+        )
     coredir = get_coredir(cfg)
     if coredir != workspace:
         packages.append(coredir)
 
     # add basetools to path
     for pdir in dirs:
-        p = coredir + '/' + pdir
+        p = f'{coredir}/{pdir}'
         if not os.path.exists(p):
             continue
         if p in path:
@@ -250,7 +240,7 @@ def prepare_env(cfg):
         path.insert(0, p)
 
     # run edksetup if needed
-    toolsdef = coredir + '/Conf/tools_def.txt'
+    toolsdef = f'{coredir}/Conf/tools_def.txt'
     if not os.path.exists(toolsdef):
         os.makedirs(os.path.dirname(toolsdef), exist_ok = True)
         build_message('running BaseTools/BuildEnv')
@@ -261,8 +251,8 @@ def prepare_env(cfg):
     os.environ['PATH'] = ':'.join(path)
     os.environ['PACKAGES_PATH'] = ':'.join(packages)
     os.environ['WORKSPACE'] = workspace
-    os.environ['EDK_TOOLS_PATH'] = coredir + '/BaseTools'
-    os.environ['CONF_PATH'] = coredir + '/Conf'
+    os.environ['EDK_TOOLS_PATH'] = f'{coredir}/BaseTools'
+    os.environ['CONF_PATH'] = f'{coredir}/Conf'
     os.environ['PYTHON_COMMAND'] = '/usr/bin/python3'
     os.environ['PYTHONHASHSEED'] = '1'
 

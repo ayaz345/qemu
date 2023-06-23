@@ -30,7 +30,11 @@ class Sun4uMachine(LinuxKernelTest):
         file_path = self.fetch_asset(tar_url, asset_hash=tar_hash)
         archive.extract(file_path, self.workdir)
         self.vm.set_console()
-        self.vm.add_args('-kernel', self.workdir + '/day23/vmlinux',
-                         '-append', self.KERNEL_COMMON_COMMAND_LINE)
+        self.vm.add_args(
+            '-kernel',
+            f'{self.workdir}/day23/vmlinux',
+            '-append',
+            self.KERNEL_COMMON_COMMAND_LINE,
+        )
         self.vm.launch()
         wait_for_console_pattern(self, 'Starting logging: OK')

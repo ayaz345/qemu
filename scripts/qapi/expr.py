@@ -62,7 +62,7 @@ def check_name_is_str(name: object,
     :raise QAPISemError: When ``name`` fails validation.
     """
     if not isinstance(name, str):
-        raise QAPISemError(info, "%s requires a string name" % source)
+        raise QAPISemError(info, f"{source} requires a string name")
 
 
 def check_name_str(name: str, info: QAPISourceInfo, source: str) -> str:
@@ -87,7 +87,7 @@ def check_name_str(name: str, info: QAPISourceInfo, source: str) -> str:
     # and 'q_obj_*' implicit type names.
     match = valid_name.match(name)
     if not match or c_name(name, False).startswith('q_'):
-        raise QAPISemError(info, "%s has an invalid name" % source)
+        raise QAPISemError(info, f"{source} has an invalid name")
     return match.group(3)
 
 
@@ -107,8 +107,7 @@ def check_name_upper(name: str, info: QAPISourceInfo, source: str) -> None:
     """
     stem = check_name_str(name, info, source)
     if re.search(r'[a-z-]', stem):
-        raise QAPISemError(
-            info, "name of %s must not use lowercase or '-'" % source)
+        raise QAPISemError(info, f"name of {source} must not use lowercase or '-'")
 
 
 def check_name_lower(name: str, info: QAPISourceInfo, source: str,
@@ -132,8 +131,7 @@ def check_name_lower(name: str, info: QAPISourceInfo, source: str,
     stem = check_name_str(name, info, source)
     if ((not permit_upper and re.search(r'[A-Z]', stem))
             or (not permit_underscore and '_' in stem)):
-        raise QAPISemError(
-            info, "name of %s must not use uppercase or '_'" % source)
+        raise QAPISemError(info, f"name of {source} must not use uppercase or '_'")
 
 
 def check_name_camel(name: str, info: QAPISourceInfo, source: str) -> None:
@@ -151,7 +149,7 @@ def check_name_camel(name: str, info: QAPISourceInfo, source: str) -> None:
     """
     stem = check_name_str(name, info, source)
     if not re.match(r'[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*$', stem):
-        raise QAPISemError(info, "name of %s must use CamelCase" % source)
+        raise QAPISemError(info, f"name of {source} must use CamelCase")
 
 
 def check_defn_name_str(name: str, info: QAPISourceInfo, meta: str) -> None:
@@ -170,17 +168,16 @@ def check_defn_name_str(name: str, info: QAPISourceInfo, meta: str) -> None:
 
     :raise QAPISemError: When ``name`` fails validation.
     """
-    if meta == 'event':
-        check_name_upper(name, info, meta)
-    elif meta == 'command':
+    if meta == 'command':
         check_name_lower(
             name, info, meta,
             permit_underscore=name in info.pragma.command_name_exceptions)
+    elif meta == 'event':
+        check_name_upper(name, info, meta)
     else:
         check_name_camel(name, info, meta)
         if name.endswith('List'):
-            raise QAPISemError(
-                info, "%s name should not end in 'List'" % meta)
+            raise QAPISemError(info, f"{meta} name should not end in 'List'")
 
 
 def check_keys(value: Dict[str, object],
@@ -201,15 +198,14 @@ def check_keys(value: Dict[str, object],
     """
 
     def pprint(elems: Iterable[str]) -> str:
-        return ', '.join("'" + e + "'" for e in sorted(elems))
+        return ', '.join(f"'{e}'" for e in sorted(elems))
 
     missing = set(required) - set(value)
     if missing:
         raise QAPISemError(
             info,
-            "%s misses key%s %s"
-            % (source, 's' if len(missing) > 1 else '',
-               pprint(missing)))
+            f"{source} misses key{'s' if len(missing) > 1 else ''} {pprint(missing)}",
+        )
     allowed = set(required) | set(optional)
     unknown = set(value) - allowed
     if unknown:
@@ -232,12 +228,10 @@ def check_flags(expr: QAPIExpression) -> None:
     """
     for key in ('gen', 'success-response'):
         if key in expr and expr[key] is not False:
-            raise QAPISemError(
-                expr.info, "flag '%s' may only use false value" % key)
+            raise QAPISemError(expr.info, f"flag '{key}' may only use false value")
     for key in ('boxed', 'allow-oob', 'allow-preconfig', 'coroutine'):
         if key in expr and expr[key] is not True:
-            raise QAPISemError(
-                expr.info, "flag '%s' may only use true value" % key)
+            raise QAPISemError(expr.info, f"flag '{key}' may only use true value")
     if 'allow-oob' in expr and 'coroutine' in expr:
         # This is not necessarily a fundamental incompatibility, but
         # we don't have a use case and the desired semantics isn't
@@ -269,20 +263,24 @@ def check_if(expr: Dict[str, object],
             if not re.fullmatch(r'[A-Z][A-Z0-9_]*', cond):
                 raise QAPISemError(
                     info,
-                    "'if' condition '%s' of %s is not a valid identifier"
-                    % (cond, source))
+                    f"'if' condition '{cond}' of {source} is not a valid identifier",
+                )
             return
 
         if not isinstance(cond, dict):
             raise QAPISemError(
                 info,
-                "'if' condition of %s must be a string or an object" % source)
-        check_keys(cond, info, "'if' condition of %s" % source, [],
-                   ["all", "any", "not"])
+                f"'if' condition of {source} must be a string or an object",
+            )
+        check_keys(
+            cond,
+            info,
+            f"'if' condition of {source}",
+            [],
+            ["all", "any", "not"],
+        )
         if len(cond) != 1:
-            raise QAPISemError(
-                info,
-                "'if' condition of %s has conflicting keys" % source)
+            raise QAPISemError(info, f"'if' condition of {source} has conflicting keys")
 
         if 'not' in cond:
             _check_if(cond['not'])
@@ -294,12 +292,10 @@ def check_if(expr: Dict[str, object],
     def _check_infix(operator: str, operands: object) -> None:
         if not isinstance(operands, list):
             raise QAPISemError(
-                info,
-                "'%s' condition of %s must be an array"
-                % (operator, source))
+                info, f"'{operator}' condition of {source} must be an array"
+            )
         if not operands:
-            raise QAPISemError(
-                info, "'if' condition [] of %s is useless" % source)
+            raise QAPISemError(info, f"'if' condition [] of {source} is useless")
         for operand in operands:
             _check_if(operand)
 
@@ -336,7 +332,7 @@ def normalize_members(members: object) -> None:
 def check_type_name(value: Optional[object],
                     info: QAPISourceInfo, source: str) -> None:
     if value is not None and not isinstance(value, str):
-        raise QAPISemError(info, "%s should be a type name" % source)
+        raise QAPISemError(info, f"{source} should be a type name")
 
 
 def check_type_name_or_array(value: Optional[object],
@@ -345,13 +341,10 @@ def check_type_name_or_array(value: Optional[object],
         return
 
     if not isinstance(value, list):
-        raise QAPISemError(info,
-                           "%s should be a type name or array" % source)
+        raise QAPISemError(info, f"{source} should be a type name or array")
 
     if len(value) != 1 or not isinstance(value[0], str):
-        raise QAPISemError(info,
-                           "%s: array type must contain single type name" %
-                           source)
+        raise QAPISemError(info, f"{source}: array type must contain single type name")
 
 
 def check_type_implicit(value: Optional[object],
@@ -378,20 +371,19 @@ def check_type_implicit(value: Optional[object],
         return
 
     if not isinstance(value, dict):
-        raise QAPISemError(info,
-                           "%s should be an object or type name" % source)
+        raise QAPISemError(info, f"{source} should be an object or type name")
 
     permissive = parent_name in info.pragma.member_name_exceptions
 
     for (key, arg) in value.items():
-        key_source = "%s member '%s'" % (source, key)
+        key_source = f"{source} member '{key}'"
         if key.startswith('*'):
             key = key[1:]
         check_name_lower(key, info, key_source,
                          permit_upper=permissive,
                          permit_underscore=permissive)
         if c_name(key, False) == 'u' or c_name(key, False).startswith('has_'):
-            raise QAPISemError(info, "%s uses reserved name" % key_source)
+            raise QAPISemError(info, f"{key_source} uses reserved name")
         check_keys(arg, info, key_source, ['type'], ['if', 'features'])
         check_if(arg, info, key_source)
         check_features(arg.get('features'), info)
@@ -436,7 +428,7 @@ def check_features(features: Optional[object],
         assert isinstance(feat, dict)
         check_keys(feat, info, source, ['name'], ['if'])
         check_name_is_str(feat['name'], info, source)
-        source = "%s '%s'" % (source, feat['name'])
+        source = f"{source} '{feat['name']}'"
         check_name_lower(feat['name'], info, source)
         check_if(feat, info, source)
 
@@ -469,10 +461,10 @@ def check_enum(expr: QAPIExpression) -> None:
         check_keys(member, info, source, ['name'], ['if', 'features'])
         member_name = member['name']
         check_name_is_str(member_name, info, source)
-        source = "%s '%s'" % (source, member_name)
+        source = f"{source} '{member_name}'"
         # Enum members may start with a digit
         if member_name[0].isdigit():
-            member_name = 'd' + member_name  # Hack: hide the digit
+            member_name = f'd{member_name}'
         check_name_lower(member_name, info, source,
                          permit_upper=permissive,
                          permit_underscore=permissive)
@@ -518,7 +510,7 @@ def check_union(expr: QAPIExpression) -> None:
         raise QAPISemError(info, "'data' must be an object")
 
     for (key, value) in members.items():
-        source = "'data' member '%s'" % key
+        source = f"'data' member '{key}'"
         check_keys(value, info, source, ['type'], ['if'])
         check_if(value, info, source)
         check_type_name(value['type'], info, source)
@@ -543,7 +535,7 @@ def check_alternate(expr: QAPIExpression) -> None:
         raise QAPISemError(info, "'data' must be an object")
 
     for (key, value) in members.items():
-        source = "'data' member '%s'" % key
+        source = f"'data' member '{key}'"
         check_name_lower(key, info, source)
         check_keys(value, info, source, ['type'], ['if'])
         check_if(value, info, source)
@@ -561,9 +553,7 @@ def check_command(expr: QAPIExpression) -> None:
     """
     args = expr.get('data')
     rets = expr.get('returns')
-    boxed = expr.get('boxed', False)
-
-    if boxed:
+    if boxed := expr.get('boxed', False):
         if args is None:
             raise QAPISemError(expr.info, "'boxed': true requires 'data'")
         check_type_name(args, expr.info, "'data'")
@@ -582,9 +572,7 @@ def check_event(expr: QAPIExpression) -> None:
     :return: None, ``expr`` is normalized in-place as needed.
     """
     args = expr.get('data')
-    boxed = expr.get('boxed', False)
-
-    if boxed:
+    if boxed := expr.get('boxed', False):
         if args is None:
             raise QAPISemError(expr.info, "'boxed': true requires 'data'")
         check_type_name(args, expr.info, "'data'")
@@ -621,15 +609,14 @@ def check_exprs(exprs: List[QAPIExpression]) -> List[QAPIExpression]:
                 " 'command', 'event'")
         meta = metas.pop()
 
-        check_name_is_str(expr[meta], info, "'%s'" % meta)
+        check_name_is_str(expr[meta], info, f"'{meta}'")
         name = cast(str, expr[meta])
         info.set_defn(meta, name)
         check_defn_name_str(name, info, meta)
 
         if doc:
             if doc.symbol != name:
-                raise QAPISemError(
-                    info, "documentation comment is for '%s'" % doc.symbol)
+                raise QAPISemError(info, f"documentation comment is for '{doc.symbol}'")
             doc.check_expr(expr)
         elif info.pragma.doc_required:
             raise QAPISemError(info,
